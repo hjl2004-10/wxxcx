@@ -1,0 +1,123 @@
+/* pages/studyDetail/studyDetail.wxss */
+@import "../../app.wxss";
+
+.container {
+  padding: 0 30rpx 40rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  font-size: 36rpx;
+  font-weight: bold;
+  padding: 20rpx 0;
+  margin-bottom: 20rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.back-icon {
+  font-size: 36rpx;
+  margin-right: 10rpx;
+  color: #007AFF;
+}
+
+.detail-header {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333;
+  margin: 30rpx 0;
+  text-align: center;
+  padding: 20rpx;
+  background-color: #fff;
+  border-radius: 10rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.detail-info {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.info-item {
+  display: flex;
+  margin: 15rpx 0;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #666;
+  width: 140rpx;
+}
+
+.info-value {
+  color: #333;
+  flex: 1;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  padding: 20rpx 0;
+  color: #007AFF;
+  margin-top: 20rpx;
+}
+
+.task-section, .card-section {
+  margin-bottom: 30rpx;
+}
+
+.task-item, .card-item {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.task-header, .card-header {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15rpx;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 15rpx;
+}
+
+.task-content, .card-content {
+  padding: 10rpx 0;
+}
+
+.task-text, .card-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+.four-plants {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 15px;
+}
+
+.plant-item {
+  width: 45%;
+  height: 100px;
+  background-color: #FFF9E6;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.plant-image {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+} 

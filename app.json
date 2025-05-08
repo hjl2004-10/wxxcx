@@ -1,0 +1,44 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/logs/logs",
+    "pages/studyProcess/studyProcess",
+    "pages/studyDetail/studyDetail",
+    "pages/share/share",
+    "pages/myProfile/myProfile"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "亲子研学智能规划系统",
+    "navigationBarBackgroundColor": "#FDEAAA"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#E6A23C",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/studyProcess/studyProcess",
+        "text": "主页",
+        "iconPath": "images/custom_study.png",
+        "selectedIconPath": "images/custom_study_selected.png"
+      },
+      {
+        "pagePath": "pages/index/index",
+        "text": "导航",
+        "iconPath": "images/smart_nav.png",
+        "selectedIconPath": "images/smart_nav_selected.png"
+      },
+      {
+        "pagePath": "pages/myProfile/myProfile",
+        "text": "我的",
+        "iconPath": "images/my_profile.png",
+        "selectedIconPath": "images/my_profile_selected.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

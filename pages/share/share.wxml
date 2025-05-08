@@ -1,0 +1,55 @@
+<!--pages/share/share.wxml-->
+<view class="container">
+  <view class="nav-bar">
+    <view class="back-icon" bindtap="goBack">〈</view>
+    <text class="title">分享</text>
+  </view>
+  
+  <view class="flow-steps">
+    <view class="flow-step" bindtap="goToStudyBefore">
+      <view class="step-circle">1</view>
+      <text class="step-text">研学前</text>
+    </view>
+    <view class="step-line"></view>
+    <view class="flow-step" bindtap="goToStudyDuring">
+      <view class="step-circle">2</view>
+      <text class="step-text">研学中</text>
+    </view>
+    <view class="step-line"></view>
+    <view class="flow-step active">
+      <view class="step-circle">3</view>
+      <text class="step-text">研学后</text>
+    </view>
+  </view>
+  
+  <view class="share-section">
+    <view class="share-card">
+      <view class="share-header">
+        <image class="user-avatar" src="/images/avatar.png"></image>
+        <view class="user-info">
+          <text class="username">{{username}}</text>
+          <text class="share-time">{{shareTime}}</text>
+        </view>
+      </view>
+      
+      <view class="share-content">
+        <text class="share-text">{{shareText}}</text>
+        <view class="share-images">
+          <image wx:for="{{shareImages}}" wx:key="index" src="{{item}}" mode="aspectFill" class="share-image"></image>
+        </view>
+      </view>
+      
+      <view class="share-footer">
+        <view class="action-button" bindtap="likePost">
+          <image src="/images/like_icon.png" class="action-icon"></image>
+          <text>{{likeCount}}</text>
+        </view>
+        <view class="action-button" bindtap="commentPost">
+          <image src="/images/comment_icon.png" class="action-icon"></image>
+          <text>{{commentCount}}</text>
+        </view>
+        <button class="share-button" open-type="share">分享给朋友</button>
+      </view>
+    </view>
+  </view>
+</view>

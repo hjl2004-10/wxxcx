@@ -1,0 +1,44 @@
+<!--pages/myProfile/myProfile.wxml-->
+<view class="container">
+  <view class="header">我的</view>
+
+  <view class="user-info">
+    <image class="avatar" src="{{userInfo.avatar}}"></image>
+    <view class="user-name">{{userInfo.name}}</view>
+    <view class="user-points">积分: {{userInfo.points}}</view>
+  </view>
+
+  <view class="section-title">我的研学方案</view>
+
+  <view class="study-plans">
+    <block wx:for="{{myStudyPlans}}" wx:key="id">
+      <view class="plan-item" bindtap="viewStudyPlan" data-id="{{item.id}}">
+        <image class="plan-image" src="{{item.image}}" mode="aspectFill"></image>
+        <view class="plan-info">
+          <view class="plan-title">{{item.title}}</view>
+          <view class="plan-date">{{item.date}}</view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view class="section-title">设置</view>
+  <view class="settings">
+    <view class="setting-item">
+      <view class="setting-label">账号信息</view>
+      <view class="setting-arrow">></view>
+    </view>
+    <view class="setting-item">
+      <view class="setting-label">通知设置</view>
+      <view class="setting-arrow">></view>
+    </view>
+    <view class="setting-item">
+      <view class="setting-label">关于我们</view>
+      <view class="setting-arrow">></view>
+    </view>
+    <view class="setting-item">
+      <view class="setting-label">帮助与反馈</view>
+      <view class="setting-arrow">></view>
+    </view>
+  </view>
+</view> 

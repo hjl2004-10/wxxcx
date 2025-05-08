@@ -1,0 +1,38 @@
+<!--pages/themeRecommend/themeRecommend.wxml-->
+<view class="container">
+  <view class="nav-bar">
+    <view class="back-icon" bindtap="goBack">〈</view>
+    <text class="title">研学方案</text>
+  </view>
+
+  <view class="flow-steps">
+    <view class="flow-step active">
+      <view class="step-circle">1</view>
+      <text class="step-text">研学前</text>
+    </view>
+    <view class="step-line"></view>
+    <view class="flow-step" bindtap="goToStudyDuring">
+      <view class="step-circle">2</view>
+      <text class="step-text">研学中</text>
+    </view>
+    <view class="step-line"></view>
+    <view class="flow-step" bindtap="goToStudyAfter">
+      <view class="step-circle">3</view>
+      <text class="step-text">研学后</text>
+    </view>
+  </view>
+
+  <view class="theme-grid">
+    <block wx:for="{{recommended}}" wx:key="id">
+      <view class="theme-item {{item.selected ? 'selected' : ''}}" bindtap="selectTheme" data-id="{{item.id}}">
+        <image class="theme-image" src="{{item.image}}" mode="aspectFill"></image>
+        <text class="theme-date" wx:if="{{item.date}}">{{item.date}}</text>
+        <text class="theme-title">{{item.title}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view class="instruction-text">——已根据您的研学前方案自动为您生成研学中方案——</view>
+
+  <view class="primary-btn" bindtap="generateStory">生成新方案</view>
+</view> 

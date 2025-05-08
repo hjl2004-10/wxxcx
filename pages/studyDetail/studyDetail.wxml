@@ -1,0 +1,49 @@
+<!--pages/studyDetail/studyDetail.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="back-icon" bindtap="goBack">〈 </text>
+    {{title}}
+  </view>
+
+  <view class="detail-header">
+    <text>{{planTitle}}</text>
+  </view>
+
+  <view class="detail-info">
+    <view class="info-item">
+      <text class="info-label">目的地：</text>
+      <text class="info-value">{{venue}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">时长：</text>
+      <text class="info-value">{{duration}}</text>
+    </view>
+  </view>
+
+  <view class="section-title">研学任务</view>
+
+  <view class="task-section">
+    <block wx:for="{{steps}}" wx:key="id">
+      <view class="task-item">
+        <view class="task-header">{{item.id}}.{{item.title}}</view>
+        <view class="task-content">
+          <view class="task-text">{{item.content}}</view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <block wx:if="{{studyCards && studyCards.length > 0}}">
+    <view class="section-title">研学卡片</view>
+    <view class="card-section">
+      <block wx:for="{{studyCards}}" wx:key="index">
+        <view class="card-item">
+          <view class="card-header">{{item.title}}</view>
+          <view class="card-content">
+            <view class="card-text">{{item.content}}</view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </block>
+</view> 
