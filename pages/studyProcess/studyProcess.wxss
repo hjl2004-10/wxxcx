@@ -6,6 +6,7 @@
   padding: 0;
   box-sizing: border-box;
   background-color: #FDEAAA;
+  min-height: 100vh;
 }
 
 /* 导航栏样式统一 */
@@ -21,7 +22,7 @@
 
 /* 确保导航栏无论有没有返回按钮高度一致 */
 .nav-bar.with-back, .nav-bar.no-back {
-  height: 44px; /* 固定高度 */
+  height: 50px; /* 固定高度 */
 }
 
 /* 返回按钮样式 */
@@ -53,11 +54,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 30px;
+  padding: 20rpx 40rpx;
   margin: 0;
   background-color: #FFF2D4;
-  height: 50px; /* 固定高度 */
+  height: 120rpx;
   box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 .flow-step {
@@ -65,6 +68,7 @@
   flex-direction: column;
   align-items: center;
   position: relative;
+  flex: 1;
 }
 
 /* 添加禁用步骤样式 */
@@ -74,64 +78,72 @@
 }
 
 .step-circle {
-  width: 32px;
-  height: 32px;
+  width: 64rpx;
+  height: 64rpx;
   background-color: #F8C457;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
+  color: #fff;
+  margin-bottom: 10rpx;
+  font-size: 32rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
 }
 
 .flow-step.active .step-circle {
   background-color: #E6A23C;
   color: #FFF;
+  box-shadow: 0 2rpx 8rpx rgba(230,162,60,0.3);
 }
 
 .step-text {
-  font-size: 12px;
+  font-size: 28rpx;
   color: #666;
+  font-weight: 500;
 }
 
 .flow-step.active .step-text {
-  color: #333;
+  color: #E6A23C;
   font-weight: bold;
 }
 
 .step-line {
-  width: 45px;
-  height: 2px;
+  flex: 1;
+  height: 4rpx;
   background-color: #F8C457;
-  margin-top: 15px;
+  margin: 0 20rpx;
+  position: relative;
+  top: -20rpx;
 }
 
 /* 子步骤标签样式优化 */
 .sub-step-tabs {
-  height: 40px;
+  height: 80rpx;
   display: flex;
   background-color: #FFF2D4;
-  margin: 0 0 10px 0;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin: 20rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
 .sub-step {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
-  font-size: 14px;
+  line-height: 80rpx;
+  font-size: 28rpx;
   position: relative;
   transition: all 0.3s;
+  color: #666;
 }
 
 .sub-step.active {
   background-color: #F8C457;
+  color: #fff;
   font-weight: bold;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1) inset;
 }
 
 /* 内容容器统一样式 */
@@ -1015,4 +1027,30 @@
   font-size: 14px;
   color: #555;
   line-height: 1.5;
+}
+
+/* 性别选择样式 */
+.gender-select {
+  display: flex;
+  margin-right: 8px;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 32px;
+}
+
+.gender-option {
+  width: 40px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.gender-option.active {
+  background: #F8C457;
+  color: white;
+  font-weight: bold;
 }

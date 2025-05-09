@@ -282,10 +282,11 @@ Page({
     });
   },
   
-  inputGender: function(e) {
-    const index = e.currentTarget.dataset.index;
-    let kidsInfo = this.data.kidsInfo;
-    kidsInfo[index].gender = e.detail.value;
+  // 选择性别
+  selectGender(e) {
+    const { index, gender } = e.currentTarget.dataset;
+    const kidsInfo = this.data.kidsInfo;
+    kidsInfo[index].gender = gender;
     this.setData({
       kidsInfo: kidsInfo
     });

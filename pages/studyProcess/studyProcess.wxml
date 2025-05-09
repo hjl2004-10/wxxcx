@@ -36,7 +36,10 @@
         <block wx:for="{{kidsInfo}}" wx:key="id">
           <view class="kid-row">
             <text class="kid-num">{{item.id}}</text>
-            <input class="mini-input gender" type="text" data-index="{{index}}" bindinput="inputGender" value="{{item.gender}}" placeholder="性别"/>
+            <view class="gender-select">
+              <view class="gender-option {{item.gender === '男' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="男">男</view>
+              <view class="gender-option {{item.gender === '女' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="女">女</view>
+            </view>
             <input class="mini-input age" type="number" data-index="{{index}}" bindinput="inputAge" value="{{item.age}}" placeholder="年龄"/>
             <text class="delete-icon" bindtap="deleteKid" data-index="{{index}}" wx:if="{{kidsInfo.length > 1}}">×</text>
           </view>

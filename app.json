@@ -16,6 +16,8 @@
     "color": "#999999",
     "selectedColor": "#E6A23C",
     "backgroundColor": "#FFFFFF",
+    "iconWidth": "32px",
+    "iconHeight": "32px",
     "list": [
       {
         "pagePath": "pages/studyProcess/studyProcess",
