@@ -155,6 +155,12 @@
         <view class="detail-text">{{currentSuggestion.learningGoals}}</view>
       </view>
 
+      <!-- 添加导读材料板块 -->
+      <view class="detail-section" wx:if="{{currentSuggestion.readingMaterials}}">
+        <view class="detail-section-title">导读材料</view>
+        <view class="detail-text">{{currentSuggestion.readingMaterials}}</view>
+      </view>
+
       <!-- 如果有玩法流程，显示它 -->
       <view class="detail-section" wx:if="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
         <view class="detail-section-title">玩法流程</view>
@@ -165,14 +171,6 @@
       <view class="detail-section" wx:if="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
         <view class="detail-section-title">高阶思维带动点</view>
         <view class="detail-text">{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}</view>
-      </view>
-      
-      <!-- 添加导读材料版块 -->
-      <view class="detail-section">
-        <view class="detail-section-title">导读材料</view>
-        <view class="detail-text">
-          <navigator url="./studyProcess?step=1&subStep=guideStory" class="guide-link">查看完整导读材料</navigator>
-        </view>
       </view>
     </view>
     
@@ -189,12 +187,7 @@
   <!-- 研学前-预研学指导故事 -->
   <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideStory'}}">
     <view class="story-container">
-      <view class="section-title">
-        预研学指导故事
-        <view class="refresh-btn" bindtap="regenerateGuideStory" wx:if="{{!isGeneratingStory}}">
-          <image src="/images/refresh.png" mode="aspectFit" class="refresh-icon"></image>
-        </view>
-      </view>
+      <view class="section-title">预研学指导故事</view>
       
       <view class="story-card">
         <view class="story-content">
@@ -205,24 +198,6 @@
       <view class="story-desc">阅读后，您将更好地指导孩子进行研学活动</view>
     </view>
     
-    <view class="buttons-row">
-      <view class="secondary-btn half-btn" bindtap="backToSuggestions">返回分析建议</view>
-      <view class="primary-btn half-btn" bindtap="startStudyActivity">开始研学活动</view>
-    </view>
-  </view>
-
-  <!-- 研学前-导读材料 -->
-  <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideMaterial'}}">
-    <view class="guide-material-container">
-      <view class="section-title">研学导读材料</view>
-      <view class="guide-material-content">{{guideMaterial}}</view>
-      <view class="interaction-tips">
-        <view class="tips-title">亲子互动提示:</view>
-        <view class="tips-content">
-          <!-- 互动提示内容 -->
-        </view>
-      </view>
-    </view>
     <view class="primary-btn" bindtap="startStudyActivity">开始研学活动</view>
   </view>
 
@@ -257,13 +232,8 @@
       </view>
     </block>
 
-    <!-- 添加调试信息，帮助排查问题 -->
-    <view class="debug-info" wx:if="{{!steps || steps.length === 0}}">
-      <text>未找到研学任务数据，请检查生成是否成功</text>
-    </view>
-
     <view class="buttons-row">
-      <view class="secondary-btn half-btn" bindtap="backToGuideStory">返回导读材料</view>
+      <view class="primary-btn half-btn" bindtap="viewDetails">查看详情</view>
       <view class="primary-btn half-btn" bindtap="completeStudy">完成研学</view>
     </view>
   </view>
