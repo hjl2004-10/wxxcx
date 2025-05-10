@@ -38,9 +38,9 @@
     <view class="card-section">
       <block wx:for="{{studyCards}}" wx:key="index">
         <view class="card-item">
-          <view class="card-header">{{item.title}}</view>
+          <view class="card-header">{{item.title || '研学卡片'}}</view>
           <view class="card-content">
-            <view class="card-text">{{item.content}}</view>
+            <view class="card-text">{{item.content || ''}}</view>
           </view>
         </view>
       </block>

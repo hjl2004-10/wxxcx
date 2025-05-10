@@ -2,59 +2,69 @@
 @import "../../app.wxss";
 
 .container {
-  padding: 0 30rpx 40rpx;
-  background-color: #f8f8f8;
+  padding: 0 0 30rpx;
   min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #f8f8f8;
 }
 
 .header {
-  display: flex;
-  align-items: center;
-  font-size: 36rpx;
-  font-weight: bold;
-  padding: 20rpx 0;
-  margin-bottom: 20rpx;
-  border-bottom: 1rpx solid #eee;
-}
-
-.back-icon {
-  font-size: 36rpx;
-  margin-right: 10rpx;
-  color: #007AFF;
-}
-
-.detail-header {
+  background-color: #ffd171;
+  height: 100rpx;
+  line-height: 100rpx;
+  text-align: center;
   font-size: 34rpx;
   font-weight: bold;
   color: #333;
-  margin: 30rpx 0;
-  text-align: center;
-  padding: 20rpx;
+  position: relative;
+  margin-bottom: 20rpx;
+  width: 100%;
+}
+
+.back-icon {
+  position: absolute;
+  left: 30rpx;
+  top: 0;
+  font-size: 38rpx;
+  font-weight: normal;
+}
+
+.detail-header {
   background-color: #fff;
+  padding: 30rpx;
   border-radius: 10rpx;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+  margin: 20rpx;
+  text-align: center;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+}
+
+.detail-header text {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #e6a23c;
 }
 
 .detail-info {
   background-color: #fff;
+  padding: 20rpx 30rpx;
   border-radius: 10rpx;
-  padding: 20rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+  margin: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
 }
 
 .info-item {
   display: flex;
-  margin: 15rpx 0;
+  padding: 10rpx 0;
 }
 
 .info-label {
-  font-weight: bold;
+  font-size: 28rpx;
   color: #666;
-  width: 140rpx;
+  width: 120rpx;
 }
 
 .info-value {
+  font-size: 28rpx;
   color: #333;
   flex: 1;
 }
@@ -62,40 +72,76 @@
 .section-title {
   font-size: 32rpx;
   font-weight: bold;
-  padding: 20rpx 0;
-  color: #007AFF;
-  margin-top: 20rpx;
+  color: #333;
+  margin: 40rpx 20rpx 20rpx;
+  padding-left: 20rpx;
+  border-left: 8rpx solid #e6a23c;
 }
 
-.task-section, .card-section {
-  margin-bottom: 30rpx;
+.task-section {
+  padding: 0 20rpx;
 }
 
-.task-item, .card-item {
+.task-item {
   background-color: #fff;
   border-radius: 10rpx;
-  padding: 20rpx;
   margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
 }
 
-.task-header, .card-header {
+.task-header {
+  background-color: #fff9e6;
+  padding: 20rpx 30rpx;
   font-size: 30rpx;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 15rpx;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 15rpx;
+  color: #e6a23c;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.task-content, .card-content {
-  padding: 10rpx 0;
+.task-content {
+  padding: 20rpx 30rpx;
 }
 
-.task-text, .card-text {
+.task-text {
   font-size: 28rpx;
   color: #666;
-  line-height: 1.5;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.card-section {
+  padding: 0 20rpx;
+}
+
+.card-item {
+  background-color: #fff;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  border-left: 4px solid #4caf50;
+}
+
+.card-header {
+  padding: 20rpx 30rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #4caf50;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.card-content {
+  padding: 20rpx 30rpx;
+}
+
+.card-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .four-plants {

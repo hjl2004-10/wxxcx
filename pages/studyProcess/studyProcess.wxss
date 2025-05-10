@@ -6,6 +6,7 @@
   padding: 0;
   box-sizing: border-box;
   background-color: #FDEAAA;
+  min-height: 100vh;
 }
 
 /* 导航栏样式统一 */
@@ -21,7 +22,7 @@
 
 /* 确保导航栏无论有没有返回按钮高度一致 */
 .nav-bar.with-back, .nav-bar.no-back {
-  height: 44px; /* 固定高度 */
+  height: 50px; /* 固定高度 */
 }
 
 /* 返回按钮样式 */
@@ -53,11 +54,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 30px;
+  padding: 20rpx 40rpx;
   margin: 0;
   background-color: #FFF2D4;
-  height: 50px; /* 固定高度 */
+  height: 120rpx;
   box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 .flow-step {
@@ -65,6 +68,7 @@
   flex-direction: column;
   align-items: center;
   position: relative;
+  flex: 1;
 }
 
 /* 添加禁用步骤样式 */
@@ -74,64 +78,72 @@
 }
 
 .step-circle {
-  width: 32px;
-  height: 32px;
+  width: 64rpx;
+  height: 64rpx;
   background-color: #F8C457;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
+  color: #fff;
+  margin-bottom: 10rpx;
+  font-size: 32rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
 }
 
 .flow-step.active .step-circle {
   background-color: #E6A23C;
   color: #FFF;
+  box-shadow: 0 2rpx 8rpx rgba(230,162,60,0.3);
 }
 
 .step-text {
-  font-size: 12px;
+  font-size: 28rpx;
   color: #666;
+  font-weight: 500;
 }
 
 .flow-step.active .step-text {
-  color: #333;
+  color: #E6A23C;
   font-weight: bold;
 }
 
 .step-line {
-  width: 45px;
-  height: 2px;
+  flex: 1;
+  height: 4rpx;
   background-color: #F8C457;
-  margin-top: 15px;
+  margin: 0 20rpx;
+  position: relative;
+  top: -20rpx;
 }
 
 /* 子步骤标签样式优化 */
 .sub-step-tabs {
-  height: 40px;
+  height: 80rpx;
   display: flex;
   background-color: #FFF2D4;
-  margin: 0 0 10px 0;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin: 20rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
 .sub-step {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
-  font-size: 14px;
+  line-height: 80rpx;
+  font-size: 28rpx;
   position: relative;
   transition: all 0.3s;
+  color: #666;
 }
 
 .sub-step.active {
   background-color: #F8C457;
+  color: #fff;
   font-weight: bold;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1) inset;
 }
 
 /* 内容容器统一样式 */
@@ -499,6 +511,8 @@
   box-sizing: border-box;
   font-size: 14px;
   line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .share-button {
@@ -638,6 +652,8 @@
   font-size: 14px;
   line-height: 1.5;
   color: #666;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* 无滚动的内容区域 */
@@ -820,59 +836,130 @@
 
 /* 分析建议相关样式 */
 .suggestion-tips {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 5px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+.loading-indicator {
+  font-size: 14px;
+  color: #f6a416;
+  font-weight: normal;
+  animation: pulse 1.5s infinite;
+  margin-left: 10px;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* 底部加载指示器样式 */
+.bottom-loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  margin: 5px 0 15px;
   font-size: 14px;
   color: #666;
-  margin-bottom: 10px;
-  padding: 0 5px;
+  background-color: rgba(246, 164, 22, 0.05);
+  border-radius: 8px;
+}
+
+.dot-loading {
+  display: inline-block;
+  margin-left: 5px;
+}
+
+.dot {
+  display: inline-block;
+  animation: dotBounce 1.4s infinite ease-in-out both;
+  margin: 0 1px;
+}
+
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% { 
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .suggestion-list {
   width: 100%;
   box-sizing: border-box;
+  margin-bottom: 15px;
 }
 
 .suggestion-item {
   background-color: #FFF9E6;
   border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
   position: relative;
   border: 2px solid transparent;
   transition: all 0.3s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .suggestion-item.selected {
   background-color: rgba(248, 196, 87, 0.2);
   border: 2px solid #F8C457;
+  box-shadow: 0 2px 8px rgba(248, 196, 87, 0.3);
 }
 
 .suggestion-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .suggestion-title {
   font-weight: bold;
-  font-size: 15px;
+  font-size: 16px;
   color: #333;
   flex: 1;
+  line-height: 1.3;
 }
 
 .suggestion-select-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: #F8C457;
   text-align: center;
   font-weight: bold;
+  font-size: 18px;
+  line-height: 24px;
 }
 
 .suggestion-brief {
   font-size: 14px;
   color: #666;
-  line-height: 1.4;
-  margin-bottom: 10px;
+  line-height: 1.5;
+  margin-bottom: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -884,18 +971,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
-  margin-top: 5px;
+  font-size: 13px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.05);
 }
 
 .suggestion-age {
   color: #666;
+  padding: 3px 8px;
+  background-color: rgba(0,0,0,0.03);
+  border-radius: 4px;
 }
 
 .view-detail {
   color: #F8C457;
   font-weight: bold;
-  padding: 5px 8px;
+  padding: 5px 10px;
   border-radius: 4px;
   background-color: rgba(248, 196, 87, 0.1);
 }
@@ -923,7 +1015,8 @@
 }
 
 .detail-section {
-  margin-bottom: 12px;
+  margin-bottom: 15px;
+  padding-bottom: 2px;
 }
 
 .detail-section-title {
@@ -931,22 +1024,26 @@
   font-weight: bold;
   color: #666;
   margin-bottom: 8px;
+  padding-left: 10px;
+  border-left: 3px solid #F8C457;
 }
 
 .detail-desc {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: normal;
+  word-break: break-word;
+  padding: 0 5px;
 }
 
 .detail-text {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: normal;
+  word-break: break-word;
+  padding: 0 5px;
 }
 
 /* 预研学指导故事相关样式 */
@@ -978,8 +1075,11 @@
   color: #333;
   max-height: 400px;
   overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: normal;
+  word-break: break-word;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
 }
 
 .story-desc {
@@ -1015,4 +1115,136 @@
   font-size: 14px;
   color: #555;
   line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* 性别选择样式 */
+.gender-select {
+  display: flex;
+  margin-right: 8px;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 32px;
+}
+
+.gender-option {
+  width: 40px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.gender-option.active {
+  background: #F8C457;
+  color: white;
+  font-weight: bold;
+}
+
+/* 添加这些样式到您的wxss文件 */
+.loading-tips {
+  text-align: center;
+  color: #666;
+  margin: 10px 0;
+  padding: 10px;
+  background: #f8f8f8;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+/* 添加加载提示的样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #f6a416;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
+}
+
+.more-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  margin: 5px 0;
+  background-color: rgba(248, 196, 87, 0.1);
+  border-radius: 5px;
+}
+
+.loading-text-small {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #f6a416;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-top: 5px;
+}
+
+/* 刷新按钮样式 */
+.refresh-btn {
+  display: inline-block;
+  margin-left: 10rpx;
+  padding: 6rpx;
+  vertical-align: middle;
+}
+
+.refresh-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+/* 按钮行样式 */
+.buttons-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30rpx;
+}
+
+.half-btn {
+  width: 48%;
+}
+
+/* 加载中样式 */
+.loading-text {
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+  margin: 20rpx 0;
+}
+
+/* 流式生成内容样式优化 */
+.story-content {
+  min-height: 200rpx;
 }

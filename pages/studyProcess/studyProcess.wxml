@@ -36,7 +36,10 @@
         <block wx:for="{{kidsInfo}}" wx:key="id">
           <view class="kid-row">
             <text class="kid-num">{{item.id}}</text>
-            <input class="mini-input gender" type="text" data-index="{{index}}" bindinput="inputGender" value="{{item.gender}}" placeholder="性别"/>
+            <view class="gender-select">
+              <view class="gender-option {{item.gender === '男' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="男">男</view>
+              <view class="gender-option {{item.gender === '女' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="女">女</view>
+            </view>
             <input class="mini-input age" type="number" data-index="{{index}}" bindinput="inputAge" value="{{item.age}}" placeholder="年龄"/>
             <text class="delete-icon" bindtap="deleteKid" data-index="{{index}}" wx:if="{{kidsInfo.length > 1}}">×</text>
           </view>
@@ -88,9 +91,19 @@
   
   <!-- 研学前-分析建议列表 -->
   <view class="common-content" hidden="{{currentStep != 1 || subStep != 'suggestions'}}">
-    <view class="suggestion-tips">请选择您感兴趣的研学分析建议（可多选）</view>
+    <view class="suggestion-tips">
+      请选择您感兴趣的研学分析建议（可多选）
+      <!-- 在标题右侧添加小型加载指示器，不遮挡内容 -->
+      <text class="loading-indicator" wx:if="{{isLoadingMore}}">生成中...</text>
+    </view>
     
     <view class="suggestion-list">
+      <!-- 只在没有建议时显示初始加载动画 -->
+      <view class="loading-container" wx:if="{{suggestions.length === 0}}">
+        <view class="spinner"></view>
+        <text class="loading-text">正在生成建议...</text>
+      </view>
+      
       <block wx:for="{{suggestions}}" wx:key="id">
         <view class="suggestion-item {{item.isSelected ? 'selected' : ''}}" 
           bindtap="toggleSelectSuggestion" data-index="{{index}}">
@@ -107,6 +120,16 @@
       </block>
     </view>
 
+    <!-- 在列表底部添加小型加载指示器，但仅当有建议且仍在加载时 -->
+    <view class="bottom-loading-indicator" wx:if="{{suggestions.length > 0 && isLoadingMore}}">
+      <text>正在生成更多建议...</text>
+      <view class="dot-loading">
+        <text class="dot">.</text>
+        <text class="dot">.</text>
+        <text class="dot">.</text>
+      </view>
+    </view>
+
     <view class="primary-btn {{selectedSuggestions.length === 0 ? 'disabled' : ''}}" bindtap="generatePlan">确认选择并开始研学</view>
   </view>
   
@@ -119,29 +142,37 @@
       
       <view class="detail-section">
         <view class="detail-section-title">建议描述</view>
-        <text class="detail-desc">{{currentSuggestion.description}}</text>
+        <view class="detail-desc">{{currentSuggestion.description}}</view>
       </view>
       
       <view class="detail-section">
         <view class="detail-section-title">适合年龄段</view>
-        <text class="detail-text">{{currentSuggestion.ageRange}}</text>
+        <view class="detail-text">{{currentSuggestion.ageRange}}</view>
       </view>
       
       <view class="detail-section">
         <view class="detail-section-title">学习目标</view>
-        <text class="detail-text">{{currentSuggestion.learningGoals}}</text>
+        <view class="detail-text">{{currentSuggestion.learningGoals}}</view>
       </view>
 
       <!-- 如果有玩法流程，显示它 -->
       <view class="detail-section" wx:if="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
         <view class="detail-section-title">玩法流程</view>
-        <text class="detail-text">{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}</text>
+        <view class="detail-text">{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}</view>
       </view>
       
       <!-- 如果有高阶思维带动点，显示它 -->
       <view class="detail-section" wx:if="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
         <view class="detail-section-title">高阶思维带动点</view>
-        <text class="detail-text">{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}</text>
+        <view class="detail-text">{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}</view>
+      </view>
+      
+      <!-- 添加导读材料版块 -->
+      <view class="detail-section">
+        <view class="detail-section-title">导读材料</view>
+        <view class="detail-text">
+          <navigator url="./studyProcess?step=1&subStep=guideStory" class="guide-link">查看完整导读材料</navigator>
+        </view>
       </view>
     </view>
     
@@ -158,17 +189,40 @@
   <!-- 研学前-预研学指导故事 -->
   <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideStory'}}">
     <view class="story-container">
-      <view class="section-title">预研学指导故事</view>
+      <view class="section-title">
+        预研学指导故事
+        <view class="refresh-btn" bindtap="regenerateGuideStory" wx:if="{{!isGeneratingStory}}">
+          <image src="/images/refresh.png" mode="aspectFit" class="refresh-icon"></image>
+        </view>
+      </view>
       
       <view class="story-card">
         <view class="story-content">
-          <text>{{guideStory}}</text>
+          <view>{{guideStory}}</view>
         </view>
       </view>
       
       <view class="story-desc">阅读后，您将更好地指导孩子进行研学活动</view>
     </view>
     
+    <view class="buttons-row">
+      <view class="secondary-btn half-btn" bindtap="backToSuggestions">返回分析建议</view>
+      <view class="primary-btn half-btn" bindtap="startStudyActivity">开始研学活动</view>
+    </view>
+  </view>
+
+  <!-- 研学前-导读材料 -->
+  <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideMaterial'}}">
+    <view class="guide-material-container">
+      <view class="section-title">研学导读材料</view>
+      <view class="guide-material-content">{{guideMaterial}}</view>
+      <view class="interaction-tips">
+        <view class="tips-title">亲子互动提示:</view>
+        <view class="tips-content">
+          <!-- 互动提示内容 -->
+        </view>
+      </view>
+    </view>
     <view class="primary-btn" bindtap="startStudyActivity">开始研学活动</view>
   </view>
 
@@ -203,8 +257,13 @@
       </view>
     </block>
 
+    <!-- 添加调试信息，帮助排查问题 -->
+    <view class="debug-info" wx:if="{{!steps || steps.length === 0}}">
+      <text>未找到研学任务数据，请检查生成是否成功</text>
+    </view>
+
     <view class="buttons-row">
-      <view class="primary-btn half-btn" bindtap="viewDetails">查看详情</view>
+      <view class="secondary-btn half-btn" bindtap="backToGuideStory">返回导读材料</view>
       <view class="primary-btn half-btn" bindtap="completeStudy">完成研学</view>
     </view>
   </view>

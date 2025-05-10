@@ -1,0 +1,29 @@
+<!--pages/ceshi/ceshi.wxml-->
+<view class="container">
+  <view class="service-selector">
+    <picker bindchange="onServiceChange" value="{{0}}" range="{{services}}" range-key="name">
+      <view class="picker">
+        当前选择：{{services[serviceId-1].name}}
+      </view>
+    </picker>
+  </view>
+
+  <view class="input-section">
+    <textarea placeholder="请输入您要发送的内容" value="{{inputText}}" bindinput="onInputChange" class="input-area"></textarea>
+  </view>
+
+  <view class="button-group">
+    <button bindtap="sendRequest" disabled="{{isLoading}}" type="primary">发送请求</button>
+    <button bindtap="clearAll" type="default">清空</button>
+  </view>
+
+  <view class="response-section">
+    <view class="response-title">AI响应：</view>
+    <view class="loading-indicator" wx:if="{{isLoading}}">
+      <text class="loading-text">处理中...</text>
+    </view>
+    <scroll-view scroll-y="true" class="response-content">
+      <text selectable="true">{{responseText}}</text>
+    </scroll-view>
+  </view>
+</view>
