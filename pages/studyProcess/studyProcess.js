@@ -363,15 +363,10 @@ Page({
       isLoadingMore: true // 显示加载状态
     });
     
-    // 立即显示加载状态 - 移除遮挡视野的loading
-    // wx.showLoading({
-    //   title: '生成中...',
-    //   mask: true // 防止用户点击其他区域
-    // });
-    
-    // 设置正在加载状态，但不显示wx.showLoading
-    this.setData({
-      isLoadingMore: true
+    // 显示加载提示
+    wx.showLoading({
+      title: '生成中...',
+      mask: true
     });
     
     // 构建请求文本
@@ -379,24 +374,35 @@ Page({
       `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
     ).join('；');
     
-    const promptText = `请根据以下情况生成亲子研学活动的分析建议：
-      参与者情况：${kidsInfo}
-      目的地类型：${this.data.venueType || '未知场所类型'}
-      具体场所：${this.data.specificVenue || '未知场所'}
-      游览时长：${this.data.duration || '未知时长'}`;
+    // 设计 JSON 输出格式的提示词，只返回 JSON 格式
+    const promptText = `请根据以下情况生成亲子研学活动的分析建议，并仅以 JSON 格式返回，JSON格式示例：
+    {
+      "suggestions": [
+        {
+          "title": "建议标题",
+          "description": "建议描述",
+          "ageRange": "适合年龄",
+          "learningGoals": "学习目标",
+          "readingMaterials": "导读材料",
+          "wanfaLiucheng": "玩法流程",
+          "gaojieThinking": "高阶思维带动点"
+        }
+      ]
+    }
+    参与者情况：${kidsInfo}
+    目的地类型：${this.data.venueType || '未知场所类型'}
+    具体场所：${this.data.specificVenue || '未知场所'}
+    游览时长：${this.data.duration || '未知时长'}`;
     
     console.log('开始请求AI服务1，请求文本:', promptText);
     
-    // 发送流式请求到第一个AI
+    // 发送请求到第一个AI
     this.requestAIStream('1', promptText, 
       // 处理数据块
-      function(chunk, fullText) {
-        console.log('接收到AI建议数据块:', chunk.length, '字符');
-        // 这里不做太多处理，让requestAIStream内部更新UI
-      },
+      null,
       // 完成回调
       function(result) {
-        // wx.hideLoading(); // 移除，避免影响界面
+        wx.hideLoading();
         console.log('AI建议生成完成');
         
         // 确保加载标志关闭
@@ -409,6 +415,25 @@ Page({
         that.saveCurrentStepData();
       }
     );
+    
+    // 设置一个安全定时器，确保即使回调失败，也能关闭加载状态
+    setTimeout(function() {
+      // 检查是否仍在加载
+      if (that.data.isLoadingMore) {
+        console.log('安全定时器触发，关闭加载状态');
+        wx.hideLoading();
+        that.setData({
+          isLoadingMore: false
+        });
+        
+        // 显示请求超时提示
+        wx.showToast({
+          title: '请求超时，请稍后重试',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    }, 30000); // 30秒超时
   },
   
   // 查看建议详情
@@ -626,6 +651,7 @@ Page({
     // 显示加载状态
     wx.showLoading({
       title: '生成研学计划中...',
+      mask: true // 添加遮罩防止用户触摸屏幕
     });
     
     // 使用所有选择的建议
@@ -651,291 +677,47 @@ Page({
       `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
     ).join('；');
     
-    // 合并前一个AI的返回结果作为输入
-    const promptText = `请根据以下情况，生成详细的研学任务和研学卡片，帮助孩子们更好地进行研学活动：
-      目的地类型：${that.data.venueType}
-      具体场所：${that.data.specificVenue}
-      时长：${that.data.duration}
-      参与者：${kidsInfo}
-      
-      用户选择的研学建议：
-      ${suggestionsText}
-      
-      指导故事：${that.data.guideStory.substring(0, 100)}...
-      
-      请生成3-5个研学任务，每个任务包括任务标题和任务内容。同时，生成2-3个研学卡片，每个卡片包括卡片标题和卡片内容。回答格式为严格的JSON，包含以下结构：
-      {
-        "tasks": [
-          {"title": "任务1标题", "content": "任务1详细内容"},
-          {"title": "任务2标题", "content": "任务2详细内容"}
-        ],
-        "cards": [
-          {"title": "卡片1标题", "content": "卡片1内容"},
-          {"title": "卡片2标题", "content": "卡片2内容"}
-        ]
-      }`;
-    
+    // 设计 JSON 输出格式的提示词，只返回 JSON 格式
+    const promptText = `请根据以下信息生成研学计划，并仅以 JSON 格式返回，格式示例如下：
+{
+  "planTitle": "研学计划标题",
+  "steps": [
+    {"title": "步骤1", "content": "步骤1内容"}
+  ],
+  "studyCards": [
+    {"title": "研学卡片1", "content": "卡片内容"}
+  ]
+}
+目的地类型：${that.data.venueType}
+具体场所：${that.data.specificVenue}
+时长：${that.data.duration}
+参与者：${kidsInfo}
+用户选择的研学建议：${suggestionsText}
+指导故事：${that.data.guideStory}`;
+  
     console.log('向第三个AI服务发送请求，生成研学计划');
     
-    // 发送流式请求到第三个AI
-    let planText = '';
-    let jsonStarted = false;
-    let jsonString = '';
-    
+    // 发送请求到第三个AI
     that.requestAIStream('3', promptText, 
-      // 处理数据块
-      function(chunk, fullText) {
-        planText = fullText;
-        console.log('接收到计划数据块:', chunk.length, '累计字符数:', planText.length);
-        
-        // 尝试从数据中提取JSON部分
-        const jsonRegex = /```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})/g;
-        const jsonMatches = planText.match(jsonRegex);
-        
-        if (jsonMatches && jsonMatches.length > 0) {
-          // 提取最后一个匹配的JSON
-          let lastJsonMatch = jsonMatches[jsonMatches.length - 1];
-          // 移除json标记
-          lastJsonMatch = lastJsonMatch.replace(/```json|```/g, '').trim();
-          
-          try {
-            const parsedData = JSON.parse(lastJsonMatch);
-            console.log('成功解析JSON:', parsedData);
-            
-            // 实时更新UI
-            that.updatePlanWithData(parsedData, selectedSuggestions[0].title);
-          } catch (e) {
-            console.log('JSON解析尚未完成，继续等待数据');
-          }
-        }
-      },
-      // 完成回调
+      null, // 不需要处理数据块
       function(finalText) {
         wx.hideLoading();
         console.log('计划生成完成, 长度:', finalText.length);
         
-        try {
-          // 处理返回的JSON数据
-          let parsedData = that.extractPlanData(finalText);
-          console.log('最终提取到的计划数据:', parsedData);
-          
-          // 设置研学计划
-          that.updatePlanWithData(parsedData, selectedSuggestions[0].title);
-          
-          // 最后更新UI状态并保存数据
-          that.setData({
-            currentStep: 2,  // 自动切换到研学中页面
-            showBackIcon: true,
-            stepsEnabled: true,
-            planGenerated: true
-          });
-          
-          that.updatePageTitle();
-          that.saveCurrentStepData();
-        } catch (error) {
-          console.error('处理研学计划数据失败:', error);
-          
-          // 使用默认研学计划
-          that.setData({
-            planTitle: selectedSuggestions[0].title || '研学活动计划',
-            steps: [
-              {
-                id: 1,
-                title: '了解背景知识',
-                content: '在出发前，先了解' + that.data.specificVenue + '的基本背景知识，阅读相关资料，观看视频介绍。'
-              },
-              {
-                id: 2,
-                title: '准备研学工具',
-                content: '根据研学内容准备相应的工具，如笔记本、相机、放大镜等，便于记录和探索。'
-              },
-              {
-                id: 3,
-                title: '现场研学活动',
-                content: '在' + that.data.specificVenue + '进行实地考察，按照研学路线深入探索，完成预设的任务和挑战。'
-              }
-            ],
-            studyCards: [
-              {
-                title: '探索任务卡',
-                content: '仔细观察' + that.data.specificVenue + '的环境特点，记录至少3个有趣的发现。'
-              },
-              {
-                title: '知识问答卡',
-                content: '收集与' + that.data.specificVenue + '相关的5个有趣知识点，并与家人分享。'
-              }
-            ],
-            currentStep: 2,  // 自动切换到研学中页面
-            showBackIcon: true,
-            stepsEnabled: true,
-            planGenerated: true
-          });
-          
-          that.updatePageTitle();
-          that.saveCurrentStepData();
-        }
+        // 使用handlePlainTextPlan函数处理返回的文本
+        that.handlePlainTextPlan(finalText);
       }
     );
   },
   
-  // 添加一个方法用于更新计划数据
-  updatePlanWithData: function(parsedData, suggestedTitle) {
-    // 确保数据正确
-    if (!parsedData) return;
-    
-    // 格式化任务数据
-    const steps = (parsedData.tasks && parsedData.tasks.length > 0) 
-      ? parsedData.tasks.map((task, index) => ({
-          id: index + 1,
-          title: task.title || `任务${index + 1}`,
-          content: task.content || '完成此研学任务。'
-        })) 
-      : [];
-    
-    // 格式化卡片数据
-    const cards = parsedData.cards || [];
-    
-    console.log('更新研学计划数据: 任务数', steps.length, '卡片数', cards.length);
-    
-    // 只在有数据时更新UI
-    if (steps.length > 0 || cards.length > 0) {
-      this.setData({
-        planTitle: suggestedTitle || '研学活动计划',
-        steps: steps.length > 0 ? steps : this.data.steps,
-        studyCards: cards.length > 0 ? cards : this.data.studyCards,
-        planGenerated: true
-      });
-      
-      // 记录日志以调试
-      console.log('研学计划更新后的数据:', {
-        planTitle: this.data.planTitle,
-        stepsCount: this.data.steps.length,
-        studyCardsCount: this.data.studyCards.length
-      });
-    }
-  },
-  
   // 提取计划数据的方法
   extractPlanData: function(text) {
-    let result = { tasks: [], cards: [] };
-    
-    try {
-      // 首先尝试从文本中查找完整的JSON
-      const jsonRegex = /```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})/g;
-      const jsonMatches = text.match(jsonRegex);
-      
-      if (jsonMatches && jsonMatches.length > 0) {
-        // 处理每个匹配到的JSON
-        for (const jsonMatch of jsonMatches) {
-          // 移除json标记
-          const cleanedJson = jsonMatch.replace(/```json|```/g, '').trim();
-          
-          try {
-            const parsed = JSON.parse(cleanedJson);
-            
-            // 检查是否包含正确的字段
-            if (parsed.tasks || parsed.cards) {
-              result.tasks = parsed.tasks || [];
-              result.cards = parsed.cards || [];
-              console.log('成功解析JSON计划数据:', result);
-              return result;
-            }
-          } catch (e) {
-            console.error('解析JSON失败:', e);
-            // 继续尝试下一个匹配项
-          }
-        }
-      }
-      
-      // 如果没有找到有效的JSON，尝试其他解析方式
-      // 提取任务部分
-      const tasksRegex = /(?:任务|tasks)[：:]\s*([\s\S]*?)(?=(?:卡片|cards)|$)/i;
-      const tasksMatch = text.match(tasksRegex);
-      
-      if (tasksMatch) {
-        const tasksText = tasksMatch[1];
-        // 匹配数字序号开头的任务
-        const taskItems = tasksText.match(/\d+[\.\、][^\d\.\、]+/g);
-        
-        if (taskItems && taskItems.length > 0) {
-          for (const taskItem of taskItems) {
-            const titleMatch = taskItem.match(/\d+[\.\、]\s*([^:：]+)([：:]|$)/);
-            if (titleMatch) {
-              const title = titleMatch[1].trim();
-              // 提取内容，排除标题部分
-              let content = taskItem.substring(titleMatch[0].length).trim();
-              if (!content && titleMatch[2]) {
-                // 如果内容为空但有冒号，尝试获取下一行
-                const nextLineIndex = tasksText.indexOf(taskItem) + taskItem.length;
-                const nextLineMatch = tasksText.substring(nextLineIndex).match(/([^\n]+)/);
-                if (nextLineMatch) {
-                  content = nextLineMatch[1].trim();
-                }
-              }
-              
-              result.tasks.push({ 
-                title: title, 
-                content: content || '执行此研学任务'
-              });
-            } else {
-              // 如果没有明确的标题，使用整行作为内容
-              const taskNumber = taskItem.match(/^\d+/)[0];
-              result.tasks.push({ 
-                title: `任务${taskNumber}`, 
-                content: taskItem.replace(/^\d+[\.\、]\s*/, '')
-              });
-            }
-          }
-        }
-      }
-      
-      // 提取卡片部分
-      const cardsRegex = /(?:卡片|cards)[：:]\s*([\s\S]*)/i;
-      const cardsMatch = text.match(cardsRegex);
-      
-      if (cardsMatch) {
-        const cardsText = cardsMatch[1];
-        // 匹配数字序号开头的卡片
-        const cardItems = cardsText.match(/\d+[\.\、][^\d\.\、]+/g);
-        
-        if (cardItems && cardItems.length > 0) {
-          for (const cardItem of cardItems) {
-            const titleMatch = cardItem.match(/\d+[\.\、]\s*([^:：]+)([：:]|$)/);
-            if (titleMatch) {
-              const title = titleMatch[1].trim();
-              // 提取内容，排除标题部分
-              let content = cardItem.substring(titleMatch[0].length).trim();
-              if (!content && titleMatch[2]) {
-                // 如果内容为空但有冒号，尝试获取下一行
-                const nextLineIndex = cardsText.indexOf(cardItem) + cardItem.length;
-                const nextLineMatch = cardsText.substring(nextLineIndex).match(/([^\n]+)/);
-                if (nextLineMatch) {
-                  content = nextLineMatch[1].trim();
-                }
-              }
-              
-              result.cards.push({ 
-                title: title, 
-                content: content || '研学卡片内容'
-              });
-            } else {
-              // 如果没有明确的标题，使用整行作为内容
-              const cardNumber = cardItem.match(/^\d+/)[0];
-              result.cards.push({ 
-                title: `卡片${cardNumber}`, 
-                content: cardItem.replace(/^\d+[\.\、]\s*/, '')
-              });
-            }
-          }
-        }
-      }
-      
-      console.log('从文本中提取的任务数:', result.tasks.length, '卡片数:', result.cards.length);
-    } catch (error) {
-      console.error('解析计划数据出错:', error);
-    }
-    
-    return result;
+    // 删除整个函数
+  },
+  
+  // 添加一个空的兼容方法，防止之前的代码调用出错
+  updatePlanWithData: function(parsedData, suggestedTitle) {
+    // 删除整个函数
   },
   
   // 研学后相关函数
@@ -1089,262 +871,123 @@ Page({
     const that = this;
     const serviceUrl = `http://119.3.217.132:5000/${serviceId}`;
     
-    console.log(`向AI服务${serviceId}发送流式请求, URL:`, serviceUrl);
+    console.log(`向AI服务${serviceId}发送请求, URL:`, serviceUrl);
     
     // 设置请求参数
     const requestData = {
       text: text,
-      key: 'hjl2004'  // 使用固定的访问密钥
+      key: 'hjl2004',
+      stream: false
     };
     
-    // 标记是否已完成
-    let isDone = false;
+    // 显示加载提示
+    wx.showLoading({
+      title: '正在思考中...',
+      mask: true
+    });
     
-    // 记录已收到的JSON串和纯文本
-    let jsonString = '';
-    let plainTextContent = '';
-    // JSON开始标记
-    let jsonStarted = false;
+    // 设置状态为加载中
+    this.setData({
+      isLoadingMore: true
+    });
     
-    // 设置临时建议列表，用于实时显示
-    let temporarySuggestions = [];
-    
-    // 发送流式请求
-    const requestTask = wx.request({
+    // 发送普通请求
+    wx.request({
       url: serviceUrl,
       method: 'POST',
       data: requestData,
       header: {
         'Content-Type': 'application/json',
         'X-Access-Key': 'hjl2004',
-        'Accept': 'text/event-stream'
+        'X-Stream': 'false'
       },
-      enableChunked: true,
-      responseType: 'arraybuffer',
       success: function(res) {
         console.log('请求成功状态:', res.statusCode);
+        wx.hideLoading();
+        
+        if (res.statusCode !== 200) {
+          console.error('请求失败，状态码:', res.statusCode);
+          wx.showToast({
+            title: `请求失败: ${res.statusCode}`,
+            icon: 'none'
+          });
+          that.setData({ isLoadingMore: false });
+          if (onComplete) onComplete(`请求失败: ${res.statusCode}`);
+          return;
+        }
+        
+        const responseData = res.data;
+        
+        if (responseData.error) {
+          console.error('AI服务返回错误:', responseData.error);
+          wx.showToast({
+            title: responseData.error,
+            icon: 'none'
+          });
+          that.setData({ isLoadingMore: false });
+          if (onComplete) onComplete(responseData.error);
+          return;
+        }
+        
+        // 直接使用content
+        const content = responseData.content;
+        if (!content) {
+          wx.showToast({
+            title: '获取AI回复失败',
+            icon: 'none'
+          });
+          that.setData({ isLoadingMore: false });
+          if (onComplete) onComplete("获取AI回复失败");
+          return;
+        }
+        
+        console.log('AI返回内容:', content.substring(0, 100) + '...');
+        
+        // 根据不同服务ID处理内容
+        if (serviceId === '1') {
+          // 研学前 - 处理建议
+          that.handlePlainTextSuggestions(content);
+          that.setData({
+            isLoadingMore: false,
+            showSuggestionsTab: true,
+            subStep: 'suggestions'
+          });
+        } else if (serviceId === '2') {
+          // 处理指导故事
+          that.setData({
+            guideStory: content,
+            isLoadingMore: false
+          });
+          try {
+            wx.setStorageSync('studyProcess_1_guideStory', {
+              guideStory: content
+            });
+          } catch (e) {
+            console.error('保存指导故事失败:', e);
+          }
+        } else if (serviceId === '3') {
+          // 处理研学计划
+          that.handlePlainTextPlan(content);
+          that.setData({ isLoadingMore: false });
+        }
+        
+        if (onComplete) onComplete(content);
       },
       fail: function(err) {
+        wx.hideLoading();
         console.error('AI请求失败:', err);
-        // wx.hideLoading(); // 移除，避免影响界面
         wx.showToast({
           title: 'AI服务请求失败',
           icon: 'none'
         });
-        
-        if (!isDone && onComplete) {
-          isDone = true;
-          onComplete("AI服务请求失败");
-        }
+        that.setData({ isLoadingMore: false });
+        if (onComplete) onComplete("AI服务请求失败");
       },
       complete: function() {
-        console.log('请求完成');
-        // wx.hideLoading(); // 移除，避免影响界面
-        
-        // 确保回调至少被执行一次
-        if (!isDone && onComplete) {
-          isDone = true;
-          // 如果有JSON，返回JSON，否则返回纯文本
-          if (that.data.jsonResponse && Object.keys(that.data.jsonResponse).length > 0) {
-            onComplete(that.data.jsonResponse || {});
-          } else {
-            onComplete(plainTextContent || "未接收到有效内容");
-          }
-        }
+        wx.hideLoading();
+        that.setData({ isLoadingMore: false });
       }
     });
-    
-    // 流式响应处理
-    requestTask.onChunkReceived(function(response) {
-      try {
-        if (!response || !response.data) {
-          console.log('收到空数据块');
-          return;
-        }
-        
-        // 转换二进制数据为文本
-        const arrayBuffer = response.data;
-        let text = '';
-        
-        // 尝试使用Base64解码
-        try {
-          const base64 = wx.arrayBufferToBase64(arrayBuffer);
-          text = that.base64ToUtf8(base64);
-        } catch (e) {
-          console.error('Base64解码失败，尝试直接转换:', e);
-          // 直接使用TextDecoder转换
-          const uint8Array = new Uint8Array(arrayBuffer);
-          text = String.fromCharCode.apply(null, uint8Array);
-        }
-        
-        console.log('解码数据块:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
-        
-        // 处理SSE数据并查找JSON或处理纯文本
-        if (text) {
-          const lines = text.split('\n');
-          
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // 检查数据行
-            if (line.startsWith('data:')) {
-              const data = line.substring(5).trim();
-              
-              // 检查是否是结束标记
-              if (data === '[DONE]') {
-                console.log('收到流结束标记');
-                
-                // 如果有JSON字符串，尝试解析它
-                if (jsonString) {
-                  try {
-                    console.log("完整JSON串:", jsonString);
-                    const jsonObj = JSON.parse(jsonString);
-                    
-                    // 更新UI
-                    const suggestions = that.convertJsonToSuggestions(jsonObj);
-                    
-                    // 移除加载状态提示
-                    // wx.showLoading({
-                    //   title: `已获取${suggestions.length}个建议`,
-                    // });
-                    
-                    that.setData({
-                      suggestions: suggestions,
-                      jsonResponse: jsonObj,
-                      isLoadingMore: false
-                    });
-                    
-                    that.updatePageTitle();
-                    that.saveCurrentStepData();
-                  } catch (e) {
-                    console.error('最终JSON解析失败:', e);
-                    // JSON解析失败，尝试使用纯文本建议
-                    that.handlePlainTextSuggestions(plainTextContent);
-                  }
-                } else if (plainTextContent) {
-                  // 没有JSON但有纯文本，使用纯文本生成建议
-                  that.handlePlainTextSuggestions(plainTextContent);
-                }
-                
-                // wx.hideLoading(); // 移除，避免影响界面
-                
-                if (!isDone && onComplete) {
-                  isDone = true;
-                  if (that.data.jsonResponse && Object.keys(that.data.jsonResponse).length > 0) {
-                    onComplete(that.data.jsonResponse);
-                  } else {
-                    onComplete(plainTextContent);
-                  }
-                }
-                
-                return;
-              }
-              
-              // 检查JSON开始标记
-              if (data.includes('```json')) {
-                jsonStarted = true;
-                jsonString = '';
-                console.log('检测到JSON开始标记');
-                continue;
-              }
-              
-              // 检查JSON结束标记
-              if (jsonStarted && data.includes('```')) {
-                jsonStarted = false;
-                console.log('检测到JSON结束标记');
-                
-                // 尝试解析收集到的JSON
-                try {
-                  console.log("尝试解析JSON:", jsonString);
-                  const jsonObj = JSON.parse(jsonString);
-                  
-                  // 更新UI
-                  const suggestions = that.convertJsonToSuggestions(jsonObj);
-                  
-                  // 移除加载状态提示
-                  // wx.showLoading({
-                  //   title: `已获取${suggestions.length}个建议`,
-                  // });
-                  
-                  that.setData({
-                    suggestions: suggestions,
-                    jsonResponse: jsonObj,
-                    isLoadingMore: false
-                  });
-                  
-                  that.updatePageTitle();
-                } catch (e) {
-                  console.error('JSON解析失败:', e);
-                }
-                
-                continue;
-              }
-              
-              // 收集JSON内容
-              if (jsonStarted) {
-                jsonString += data;
-                console.log('正在收集JSON:', data.substring(0, 20) + (data.length > 20 ? '...' : ''));
-                
-                // 实时解析中间状态
-                if (jsonString && jsonString.trim() && jsonString.includes('}')) {
-                  try {
-                    // 尝试补齐右括号（如果缺少的话）
-                    let tempJson = jsonString;
-                    const leftCount = (tempJson.match(/\{/g) || []).length;
-                    const rightCount = (tempJson.match(/\}/g) || []).length;
-                    
-                    if (leftCount > rightCount) {
-                      for (let j = 0; j < leftCount - rightCount; j++) {
-                        tempJson += "}";
-                      }
-                    }
-                    
-                    const partialObj = JSON.parse(tempJson);
-                    console.log("部分解析成功，键数量:", Object.keys(partialObj).length);
-                    
-                    // 更新部分内容
-                    const suggestions = that.convertJsonToSuggestions(partialObj);
-                    
-                    if (suggestions.length > 0) {
-                      // 移除加载状态提示
-                      // wx.showLoading({
-                      //   title: `已获取${suggestions.length}个建议`,
-                      // });
-                      
-                      that.setData({
-                        suggestions: suggestions,
-                        jsonResponse: partialObj
-                      });
-                      
-                      that.updatePageTitle();
-                    }
-                  } catch (e) {
-                    // 忽略部分解析错误
-                    console.log("部分解析失败，继续收集数据");
-                  }
-                }
-              } else {
-                // 处理普通数据行（非JSON格式）
-                plainTextContent += data + '\n';
-                console.log('收集普通文本:', data);
-                
-                // 每次收到新数据尝试生成临时建议
-                that.updatePlainTextSuggestions(plainTextContent);
-                
-                // 如果有回调函数，调用它
-                if (processChunk) {
-                  processChunk(data, plainTextContent);
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('处理流式数据出错:', error);
-      }
-    });
-    
-    return requestTask;
   },
   
   // 优化updatePlainTextSuggestions函数
@@ -1374,11 +1017,12 @@ Page({
       if (!line) continue;
       
       // 先查找是否包含数字序号，表示新的主题开始
-      // 匹配 "1. 【主题】" 或 "1.【主题】" 或 "1【主题】" 或 "主题1："等格式
+      // 匹配 "1. 【主题】" 或 "1.【主题】" 或 "主题1："等格式
       const themeMatch = line.match(/^(\d+)[\.\、]?\s*【([^】]+)】/) || 
                           line.match(/^(\d+)[\.\、]?\s*\[\s*([^\]]+)\s*\]/) || 
-                          line.match(/^主题\s*(\d+)\s*[:：]\s*(.+)/) ||
-                          line.match(/^建议\s*(\d+)\s*[:：]\s*(.+)/);
+                          line.match(/^主题\s*(\d+)\s*[:：]\s*.+/) ||
+                          line.match(/^建议\s*(\d+)\s*[:：]\s*.+/) ||
+                          line.match(/^(\d+)\.\s*([^：:]+)[：:]\s*([^\n]+)/);
       
       if (themeMatch) {
         // 如果有之前的主题，保存它
@@ -1589,10 +1233,17 @@ Page({
   // 处理完整的纯文本，生成最终建议
   handlePlainTextSuggestions: function(text) {
     if (!text || text.trim().length < 50) {
-      // 没有足够的文本，使用默认建议
+      // 没有足够的文本，不使用默认建议
       this.setData({
-        suggestions: getDefaultSuggestions(this.data.venueType, this.data.specificVenue, 3),
-        isLoadingMore: false
+        suggestions: [],
+        isLoadingMore: false,
+        showSuggestionsTab: true,
+        subStep: 'suggestions'
+      });
+      
+      wx.showToast({
+        title: '未能获取有效建议',
+        icon: 'none'
       });
       return;
     }
@@ -1600,70 +1251,31 @@ Page({
     console.log('从完整纯文本生成建议');
     
     // 一次性提取所有可能的建议
-    const suggestions = this.extractSuggestionsFromText(text, this.data.venueType, this.data.specificVenue);
+    const suggestions = extractSuggestionsFromText(text);
     
     if (suggestions.length > 0) {
       this.setData({
         suggestions: suggestions,
-        isLoadingMore: false
+        isLoadingMore: false,
+        showSuggestionsTab: true,
+        subStep: 'suggestions'
       });
       
       this.updatePageTitle();
       this.saveCurrentStepData();
     } else {
-      // 如果提取失败，使用默认建议
+      // 如果提取失败，仍然不使用默认建议
       this.setData({
-        suggestions: getDefaultSuggestions(this.data.venueType, this.data.specificVenue, 3),
-        isLoadingMore: false
+        suggestions: [],
+        isLoadingMore: false,
+        showSuggestionsTab: true,
+        subStep: 'suggestions'
       });
-    }
-  },
-  
-  // Base64转UTF-8
-  base64ToUtf8: function(base64) {
-    try {
-      // 使用解码方法，兼容中文字符
-      return decodeURIComponent(escape(this.base64Decode(base64)));
-    } catch (e) {
-      console.error('Base64解码错误:', e);
-      // 降级处理，直接解码
-      return this.base64Decode(base64);
-    }
-  },
-  
-  // Base64解码
-  base64Decode: function(base64) {
-    try {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-      let output = '';
       
-      base64 = String(base64).replace(/[^A-Za-z0-9\+\/\=]/g, '');
-      
-      let i = 0;
-      while (i < base64.length) {
-        let enc1 = chars.indexOf(base64.charAt(i++));
-        let enc2 = chars.indexOf(base64.charAt(i++));
-        let enc3 = chars.indexOf(base64.charAt(i++));
-        let enc4 = chars.indexOf(base64.charAt(i++));
-        
-        let chr1 = (enc1 << 2) | (enc2 >> 4);
-        let chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-        let chr3 = ((enc3 & 3) << 6) | enc4;
-        
-        output = output + String.fromCharCode(chr1);
-        
-        if (enc3 !== 64) {
-          output = output + String.fromCharCode(chr2);
-        }
-        if (enc4 !== 64) {
-          output = output + String.fromCharCode(chr3);
-        }
-      }
-      
-      return output;
-    } catch (e) {
-      console.error('Base64Decode错误:', e);
-      return '';
+      wx.showToast({
+        title: '解析建议失败',
+        icon: 'none'
+      });
     }
   },
   
@@ -1719,256 +1331,146 @@ Page({
     return true;
   },
   
-  // 将特定JSON格式转换为应用需要的建议格式
-  convertJsonToSuggestions: function(jsonObj) {
-    const suggestions = [];
-    
+  // 处理纯文本形式的研学计划
+  handlePlainTextPlan: function(text) {
+    // 使用 JSON 格式解析研学计划
+    let data = {};
     try {
-      // 遍历JSON中的每个键值对
-      for (const key in jsonObj) {
-        if (jsonObj.hasOwnProperty(key)) {
-          const content = jsonObj[key];
-          const id = parseInt(key);
-          
-          if (isNaN(id)) continue; // 跳过非数字键
-          
-          // 尝试提取标题，使用【】或"**"之间的内容
-          let title = '研学主题';
-          const titleMatch = content.match(/【([^】]+)】/) || content.match(/\*\*([^*]+)\*\*/);
-          if (titleMatch) {
-            title = titleMatch[1].trim();
-          }
-          
-          // 提取描述 - 使用第一段或前150个字符
-          let description = content.split('\n\n')[0].replace(/【[^】]+】/, '').trim();
-          if (!description || description.length < 10) {
-            description = content.substring(0, 150).replace(/【[^】]+】/, '').trim();
-          }
-          
-          // 提取年龄范围
-          let ageRange = '6-12岁';
-          const ageMatch = content.match(/推荐阶段[：:]\s*([^，\n]+)/) || 
-                            content.match(/年龄[：:]\s*([^，\n]+)/) || 
-                            content.match(/(\d+-\d+岁)/);
-          if (ageMatch) {
-            ageRange = ageMatch[1].trim();
-          }
-          
-          // 提取学习目标
-          let learningGoals = '培养观察力，增强探索精神，提升动手能力';
-          const goalsMatch = content.match(/核心能力[：:]\s*([^\n]+)/) || 
-                             content.match(/学习目标[：:]\s*([^\n]+)/) || 
-                             content.match(/能力目标[：:]\s*([^\n]+)/);
-          if (goalsMatch) {
-            learningGoals = goalsMatch[1].trim();
-          }
-          
-          // 提取玩法流程
-          let wanfaLiucheng = '';
-          const flowMatch = content.match(/玩法[\/\/]任务[：:]\s*([^\n]+)/) || 
-                            content.match(/简要玩法[：:]\s*([^\n]+)/) || 
-                            content.match(/流程[：:]\s*([^\n]+)/);
-          if (flowMatch) {
-            wanfaLiucheng = flowMatch[1].trim();
-          }
-          
-          // 提取高阶思维
-          let gaojieThinking = '';
-          const advancedMatch = content.match(/高阶提示[：:]\s*([^\n]+)/) || 
-                                content.match(/高阶思维[：:]\s*([^\n]+)/);
-          if (advancedMatch) {
-            gaojieThinking = advancedMatch[1].trim();
-          }
-          
-          // 构建建议对象
-          suggestions.push({
-            id: id,
-            title: title,
-            description: description,
-            ageRange: ageRange,
-            learningGoals: learningGoals,
-            isSelected: false,
-            wanfaLiucheng: wanfaLiucheng,
-            gaojieThinking: gaojieThinking
-          });
-        }
-      }
-      
-      // 按ID排序
-      suggestions.sort((a, b) => a.id - b.id);
-      
-    } catch (error) {
-      console.error('转换JSON到建议格式出错:', error);
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('解析研学计划 JSON 失败，使用原始文本回退:', e);
+      wx.showToast({ title: '解析研学计划失败，已回退到文本模式', icon: 'none' });
+      // 回退：将原始文本作为单步计划展示
+      const fallbackTitle = this.data.specificVenue ? `${this.data.specificVenue}研学计划` : '研学计划';
+      this.setData({
+        planTitle: fallbackTitle,
+        steps: [{ id: 1, title: fallbackTitle, content: text.trim() }],
+        studyCards: [],
+        planGenerated: true,
+        currentStep: 2
+      });
+      this.saveCurrentStepData();
+      this.updatePageTitle();
+      return;
+    }
+    const planTitle = data.planTitle || `${this.data.specificVenue || '研学目的地'}研学计划`;
+    const steps = Array.isArray(data.steps)
+      ? data.steps.map((item, idx) => ({ id: idx + 1, title: item.title || '', content: item.content || item.description || '' }))
+      : [];
+    const studyCards = Array.isArray(data.studyCards)
+      ? data.studyCards.map((item, idx) => ({ id: idx + 1, title: item.title || '', content: item.content || '' }))
+      : [];
+    this.setData({
+      planTitle: planTitle,
+      steps: steps,
+      studyCards: studyCards,
+      planGenerated: true,
+      currentStep: 2
+    });
+    this.saveCurrentStepData();
+    this.updatePageTitle();
+  },
+  
+  // 处理纯文本形式的反思内容
+  handlePlainTextReflection: function(text) {
+    console.log('处理纯文本反思内容');
+    
+    if (!text || text.trim().length === 0) {
+      wx.showToast({
+        title: '未能生成有效的反思内容',
+        icon: 'none'
+      });
+      return;
     }
     
-    return suggestions;
+    // 将AI生成的反思文本保存起来
+    this.setData({
+      reflectionText: text,
+      currentStep: 3  // 自动切换到研学后步骤
+    });
+    
+    // 保存数据
+    this.saveCurrentStepData();
+    this.updatePageTitle();
+    
+    // 显示成功提示
+    wx.showToast({
+      title: '已生成反思内容',
+      icon: 'success'
+    });
+  },
+  
+  // 辅助函数：将文本分割成指定数量的段落
+  splitTextIntoParagraphs: function(text, count) {
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    const result = [];
+    
+    if (lines.length <= count) {
+      return lines; // 如果行数少于或等于目标段落数，直接返回
+    }
+    
+    const linesPerParagraph = Math.ceil(lines.length / count);
+    
+    for (let i = 0; i < count; i++) {
+      const start = i * linesPerParagraph;
+      const end = Math.min(start + linesPerParagraph, lines.length);
+      if (start < lines.length) {
+        result.push(lines.slice(start, end).join('\n'));
+      }
+    }
+    
+    return result;
+  },
+  
+  // 根据步骤生成默认研学卡片
+  generateDefaultCards: function(steps) {
+    const cards = [];
+    
+    // 确保至少有一张研学卡片
+    if (steps && steps.length > 0) {
+      // 从每个步骤中提取关键信息
+      for (let i = 0; i < Math.min(steps.length, 3); i++) {
+        const step = steps[i];
+        // 提取步骤描述的前50个字符作为卡片内容
+        const content = step.description.substring(0, 50) + (step.description.length > 50 ? '...' : '');
+        
+        cards.push({
+          title: `研学卡片 ${i + 1}`,
+          content: content
+        });
+      }
+    } else {
+      // 如果没有步骤，创建一个默认卡片
+      cards.push({
+        title: '研学卡片 1',
+        content: '记录研学过程中的重要发现和思考'
+      });
+    }
+    
+    return cards;
   },
 });
 
-// 生成默认建议的辅助函数
-function getDefaultSuggestions(venueType, specificVenue, count) {
-  const venueInfo = specificVenue || venueType || '未知场所';
-  const defaultSuggestions = [
-    {
-      id: 1,
-      title: `探索${venueInfo}的历史之旅`,
-      description: `深入了解${venueInfo}的悠久历史和文化背景，通过互动展览和讲解，让孩子们在游览中学习历史知识，培养历史意识。`,
-      ageRange: '6-12岁',
-      learningGoals: '了解历史知识，培养观察能力，提升文化素养',
-      isSelected: false,
-      readingMaterials: `推荐阅读《${venueInfo}简史》、《趣味历史故事集》等适合儿童的历史读物，观看有关${venueInfo}的纪录片，提前了解相关历史背景知识。`,
-      wanfaLiucheng: `1. 研学前准备：收集${venueInfo}的基本历史资料，了解时间线；2. 现场观察：带孩子们寻找历史痕迹和文物，记录发现；3. 导览员互动：鼓励孩子向导览员提问；4. 分享讨论：每人分享一个最感兴趣的历史故事或文物。`,
-      gaojieThinking: '通过比较不同历史时期的差异，培养孩子的时间概念和历史变迁的认知能力，引导孩子思考历史事件与当下生活的关联。'
-    },
-    {
-      id: 2,
-      title: `${venueInfo}科学发现之旅`,
-      description: `探索${venueInfo}中的科学奥秘，通过实验和观察，培养孩子的科学思维和探究精神，激发对自然科学的兴趣。`,
-      ageRange: '7-14岁',
-      learningGoals: '培养科学思维，提高动手能力，锻炼解决问题的能力',
-      isSelected: false,
-      readingMaterials: `推荐阅读《科学家小故事》、《儿童科学实验指南》，观看科普视频，了解与${venueInfo}相关的基础科学知识，准备一个小实验笔记本记录发现。`,
-      wanfaLiucheng: `1. 提出问题：参观前列出3-5个科学问题；2. 现场探索：带着问题在展区中寻找答案；3. 动手实验：参与互动展项，记录实验过程；4. 科学笔记：绘制观察图表，记录新发现。`,
-      gaojieThinking: '引导孩子从"知道是什么"到"理解为什么"的思维跃升，培养实证思维和批判性思考能力，探究科学原理背后的逻辑关系。'
-    },
-    {
-      id: 3,
-      title: `${venueInfo}艺术体验`,
-      description: `欣赏${venueInfo}的艺术之美，参与创作活动，提升孩子的艺术鉴赏能力和创造力，感受艺术的魅力。`,
-      ageRange: '5-15岁',
-      learningGoals: '培养艺术鉴赏能力，激发创造力，提高审美素养',
-      isSelected: false,
-      readingMaterials: `推荐阅读《儿童艺术启蒙》、《世界艺术名作赏析》，浏览${venueInfo}的官方网站图片集，了解不同艺术形式和表现手法，准备绘画工具进行写生。`,
-      wanfaLiucheng: `1. 艺术观察：引导孩子仔细观察展品的色彩、形状和材质；2. 感受表达：用形容词描述作品给自己的感受；3. 创意模仿：选择一个喜欢的作品尝试临摹或改编；4. 创作分享：完成一件受启发的艺术创作并讲述灵感来源。`,
-      gaojieThinking: '通过艺术作品中的视觉元素，培养孩子的审美判断力，引导其理解艺术表达与情感传递的关系，提升艺术语言的解读能力。'
-    },
-    {
-      id: 4,
-      title: `${venueInfo}自然探索`,
-      description: `在${venueInfo}中探索大自然的奥秘，观察动植物，了解生态环境，培养孩子的环保意识和对自然的热爱。`,
-      ageRange: '6-16岁',
-      learningGoals: '增强环保意识，培养观察能力，了解生态知识',
-      isSelected: false,
-      readingMaterials: `推荐阅读《大自然的奥秘》、《动植物图鉴》，观看自然纪录片，了解${venueInfo}的生态环境特点，准备一个观察日记本和放大镜。`,
-      wanfaLiucheng: `1. 生态寻宝：寻找并记录不同种类的植物和动物；2. 环境观察：注意不同区域的环境特点和生物多样性；3. 自然笔记：用文字和绘画记录观察发现；4. 环保行动：讨论保护环境的方法，并在日常生活中实践。`,
-      gaojieThinking: '引导孩子理解生态系统的平衡和相互依存关系，建立人与自然和谐共生的生态观念，培养可持续发展的环保思维。'
-    },
-    {
-      id: 5,
-      title: `${venueInfo}亲子互动体验`,
-      description: `通过在${venueInfo}的亲子互动活动，增进家庭成员间的感情，共同完成任务和挑战，享受亲子时光。`,
-      ageRange: '3-12岁',
-      learningGoals: '增进亲子关系，培养团队合作精神，锻炼沟通能力',
-      isSelected: false,
-      readingMaterials: `推荐阅读《亲子游戏100例》、《如何与孩子有效沟通》，查看${venueInfo}的亲子活动推荐，准备一个小型亲子游戏手册和相机记录美好时刻。`,
-      wanfaLiucheng: `1. 角色互换：让孩子担任向导，带领父母参观；2. 任务挑战：共同完成研学任务单上的挑战；3. 分享时刻：设置"发现分享站"，每人分享新发现；4. 合作创作：共同创作一个与研学主题相关的作品。`,
-      gaojieThinking: '通过共同体验和互动，促进家庭成员间的有效沟通，培养孩子的表达能力和自信心，建立更深层次的亲子连接和信任关系。'
-    }
-  ];
-  
-  // 返回指定数量的建议，最多5个
-  return defaultSuggestions.slice(0, Math.min(count, 5));
-}
-
-// 增加一个从文本中提取建议的辅助函数
-function extractSuggestionsFromText(text, venueType, specificVenue) {
-  const suggestions = [];
-  const venueInfo = specificVenue || venueType || '未知场所';
-  
+// 重构 extractSuggestionsFromText，只解析 AI 返回的 JSON
+function extractSuggestionsFromText(text) {
+  let suggestions = [];
   try {
-    // 尝试从完整回答中提取更多信息
-    console.log('尝试从文本中提取建议:', text);
-    
-    // 尝试匹配类似 "主题"或"建议"的段落模式
-    const mainThemeMatch = text.match(/##\s*亲子研学主题建议/i);
-    if (mainThemeMatch) {
-      // 如果找到主题建议部分，尝试提取更完整的信息
-      const themeSection = text.slice(mainThemeMatch.index);
-      
-      // 尝试匹配"主题"或"标题"的模式
-      const themeMatches = themeSection.match(/["「】\[]*([^"「】\[:\n]{3,30})["」【\]]*[：:]/g);
-      if (themeMatches && themeMatches.length > 0) {
-        themeMatches.forEach((themeMatch, index) => {
-          if (index >= 8) return; // 限制最多8个建议
-          
-          const title = themeMatch.replace(/["「】\[\]」【:：]/g, '').trim();
-          const descriptionMatch = themeSection.slice(themeSection.indexOf(themeMatch) + themeMatch.length)
-            .match(/([^\n.。!！?？]{10,200})/);
-          const description = descriptionMatch ? descriptionMatch[1].trim() : `关于${title}的探索活动`;
-          
-          // 尝试提取玩法流程
-          const flowProcessMatch = themeSection.slice(themeSection.indexOf(themeMatch))
-            .match(/玩法流程[：:]\s*([^\n]{10,500})/);
-          const flowProcess = flowProcessMatch ? flowProcessMatch[1].trim() : '';
-          
-          // 尝试提取高阶思维带动点
-          const advancedThinkingMatch = themeSection.slice(themeSection.indexOf(themeMatch))
-            .match(/高阶思维带动点[：:]\s*([^\n]{10,500})/);
-          const advancedThinking = advancedThinkingMatch ? advancedThinkingMatch[1].trim() : '';
-          
-          // 尝试提取导读材料
-          const readingMaterialsMatch = themeSection.slice(themeSection.indexOf(themeMatch))
-            .match(/导读材料[：:]\s*([^\n]{10,500})/);
-          const readingMaterials = readingMaterialsMatch ? readingMaterialsMatch[1].trim() : 
-            `推荐在前往${venueInfo}前，阅读相关书籍和资料，观看介绍视频，帮助孩子对研学内容有初步了解。`;
-          
-          suggestions.push({
-            id: index + 1,
-            title: title,
-            description: description,
-            ageRange: '6-12岁', // 默认年龄范围
-            learningGoals: '提升观察能力，增长知识，培养兴趣', // 默认学习目标
-            isSelected: false,
-            readingMaterials: readingMaterials, // 添加导读材料
-            wanfaLiucheng: flowProcess, // 使用拼音属性名
-            gaojieThinking: advancedThinking // 使用拼音属性名
-          });
-        });
-      }
+    const data = JSON.parse(text);
+    if (Array.isArray(data.suggestions)) {
+      suggestions = data.suggestions.map((item, index) => ({
+        id: index + 1,
+        title: item.title || '',
+        description: item.description || '',
+        ageRange: item.ageRange || '',
+        learningGoals: item.learningGoals || '',
+        readingMaterials: item.readingMaterials || '',
+        wanfaLiucheng: item.wanfaLiucheng || '',
+        gaojieThinking: item.gaojieThinking || '',
+        isSelected: false
+      }));
     }
-    
-    // 如果上面的方法没有找到建议，尝试简单的数字列表匹配
-    if (suggestions.length === 0) {
-      // 尝试匹配类似 "1. 主题名称：描述" 的模式
-      const suggestionRegex = /(\d+)\.\s*([^：:]+)[：:]\s*([^\n]+)/g;
-      let match;
-      let count = 0;
-      
-      while ((match = suggestionRegex.exec(text)) !== null && count < 8) {
-        suggestions.push({
-          id: count + 1,
-          title: match[2].trim(),
-          description: match[3].trim(),
-          ageRange: '6-12岁', // 默认年龄范围
-          learningGoals: '提升观察能力，增长知识，培养兴趣', // 默认学习目标
-          isSelected: false,
-          readingMaterials: `推荐在前往${venueInfo}前，阅读相关书籍和资料，观看介绍视频，帮助孩子对研学内容有初步了解。`, // 添加默认导读材料
-          wanfaLiucheng: '', // 空的玩法流程
-          gaojieThinking: '' // 空的高阶思维带动点
-        });
-        count++;
-      }
-    }
-    
-    console.log('从文本中提取到的建议数量:', suggestions.length);
   } catch (e) {
-    console.error('从文本提取建议失败:', e);
+    console.error('解析建议 JSON 失败:', e);
   }
-  
-  // 如果没有提取到任何建议，返回至少一个默认建议
-  if (suggestions.length === 0) {
-    suggestions.push({
-      id: 1,
-      title: `${venueInfo}探索之旅`,
-      description: `在${venueInfo}中进行富有教育意义的探索活动，通过观察、互动和体验，增长知识，培养观察能力和探索精神。`,
-      ageRange: '6-12岁',
-      learningGoals: '提升观察能力，增长知识，培养探索精神',
-      isSelected: false,
-      readingMaterials: `推荐在前往${venueInfo}前，阅读相关书籍和资料，观看介绍视频，帮助孩子对研学内容有初步了解。`, // 添加默认导读材料
-      wanfaLiucheng: '', // 空的玩法流程
-      gaojieThinking: '' // 空的高阶思维带动点
-    });
-  }
-  
   return suggestions;
 }

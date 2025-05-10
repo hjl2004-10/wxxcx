@@ -99,7 +99,7 @@
     
     <view class="suggestion-list">
       <!-- 只在没有建议时显示初始加载动画 -->
-      <view class="loading-container" wx:if="{{suggestions.length === 0}}">
+      <view class="loading-container" wx:if="{{suggestions.length === 0 && isLoadingMore}}">
         <view class="spinner"></view>
         <text class="loading-text">正在生成建议...</text>
       </view>

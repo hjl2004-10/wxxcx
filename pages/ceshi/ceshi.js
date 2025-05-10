@@ -440,13 +440,18 @@ Page({
         
         // 处理SSE格式数据
         if (text) {
-          const lines = text.split('\n');
-          let newContent = '';
+          const lines = text.split('\n'); // 仍然按行分割，因为SSE是基于行的
+          let newContentChunk = ''; // 用于收集当前数据块中的有效内容
           
           for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+            const line = lines[i]; // 不再使用 .trim()，保留原始行内容
             if (line.startsWith('data:')) {
-              const data = line.substring(5).trim();
+              // 只移除 "data:" 前缀，保留后面的所有内容，包括可能的空格
+              let data = line.substring(5); 
+              if (data.startsWith(' ')) { // 如果 "data: " 后面有空格，也移除这个空格
+                data = data.substring(1);
+              }
+
               if (data === '[DONE]') {
                 // 流结束标记
                 that.setData({
@@ -458,22 +463,35 @@ Page({
                 if (that.data.serviceId === '1') {
                   that.parseAIOptions(that.data.responseText);
                 }
-              } else {
-                // 累加内容
-                newContent += data;
+                // [DONE] 标记本身不应作为内容显示，所以这里直接跳过后续拼接
+                continue; 
               }
+              // 将有效数据和原始的换行符（通过在每行后添加\n）拼接到当前块
+              newContentChunk += data + (lines.length > 1 && i < lines.length -1 ? '\n' : '');
+            } else if (line === '' && i < lines.length - 1 && lines[i+1].startsWith('data:')) {
+              // 处理SSE中可能的空行分隔符，如果它后面还有data:行，我们也加一个换行
+              // 但如果已经是最后一行空行，就不加了
+              // 或者，如果AI本身就想输出空行，下面的逻辑也会保留
+            } else if (line !== '') {
+                // 如果某行不是以 "data:" 开头，也不是[DONE]等控制字符，
+                // 并且AI的原始输出可能包含不带 "data:" 的行（虽然不标准SSE，但为了兼容性）
+                // 或者AI内容本身就需要换行，我们将其视为内容的一部分。
+                // 重要的：如果AI返回的原始文本就包含多余的换行，这里也会保留。
+                // 一般来说，AI返回的SSE流，内容都会在 "data:" 之后。
+                // 此处主要确保如果原始文本中就有换行，它会被保留。
+                 newContentChunk += line + (lines.length > 1 && i < lines.length -1 ? '\n' : '');
             }
           }
           
           // 更新UI显示，只在有新内容时更新
-          if (newContent) {
+          if (newContentChunk) {
             if (that.data.serviceId === '1') {
               that.setData({
-                responseText: that.data.responseText + newContent
+                responseText: that.data.responseText + newContentChunk
               });
             } else if (that.data.serviceId === '2') {
               that.setData({
-                materialsText: that.data.materialsText + newContent
+                materialsText: that.data.materialsText + newContentChunk
               });
             }
           }
