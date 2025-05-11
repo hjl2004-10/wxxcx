@@ -6,7 +6,8 @@
     "pages/studyDetail/studyDetail",
     "pages/share/share",
     "pages/myProfile/myProfile",
-    "pages/ceshi/ceshi"
+    "pages/ceshi/ceshi",
+    "pages/wenda/wenda"
   ],
   "window": {
     "navigationBarTextStyle": "black",
@@ -27,7 +28,7 @@
         "selectedIconPath": "images/custom_study_selected.png"
       },
       {
-        "pagePath": "pages/index/index",
+        "pagePath": "pages/ceshi/ceshi",
         "text": "导航",
         "iconPath": "images/smart_nav.png",
         "selectedIconPath": "images/smart_nav_selected.png"

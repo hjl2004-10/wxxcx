@@ -1048,45 +1048,33 @@
 
 /* 预研学指导故事相关样式 */
 .story-container {
-  background-color: #FFF9E6;
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 15px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #E6A23C;
-  margin-bottom: 12px;
+  padding: 10px;
 }
 
 .story-card {
-  background-color: #FFFFFF;
-  border-radius: 8px;
+  background-color: #fff;
+  border-radius: 12px;
   padding: 15px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .story-content {
-  font-size: 14px;
+  margin: 10px 0;
+  font-size: 15px;
   line-height: 1.6;
   color: #333;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: normal;
-  word-break: break-word;
-  padding: 10px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
+}
+
+.story-line {
+  margin-bottom: 10px;
 }
 
 .story-desc {
-  font-size: 12px;
-  color: #999;
   text-align: center;
-  margin-top: 10px;
+  color: #888;
+  font-size: 14px;
+  margin: 15px 0;
 }
 
 /* 研学卡片相关样式 */
@@ -1247,4 +1235,52 @@
 /* 流式生成内容样式优化 */
 .story-content {
   min-height: 200rpx;
+}
+
+/* 骨架屏样式 */
+.skeleton {
+  width: 100%;
+  padding: 20px;
+  background-color: #f8f8f8;
+}
+
+.skeleton-header {
+  height: 24px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  animation: skeleton-loading 1.5s infinite ease-in-out;
+  width: 60%;
+}
+
+.loading-text {
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  margin: 15px 0;
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-block {
+  height: 80px;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  animation: skeleton-loading 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }

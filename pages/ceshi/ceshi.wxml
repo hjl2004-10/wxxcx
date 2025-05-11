@@ -1,115 +1,29 @@
 <!--pages/ceshi/ceshi.wxml-->
 <view class="container">
-  <view class="step-bar">
-    <view class="step active">
-      <view class="step-circle">1</view>
-      <view class="step-text">研学前</view>
-    </view>
-    <view class="step-line"></view>
-    <view class="step">
-      <view class="step-circle">2</view>
-      <view class="step-text">研学中</view>
-    </view>
-    <view class="step-line"></view>
-    <view class="step">
-      <view class="step-circle">3</view>
-      <view class="step-text">研学后</view>
-    </view>
+  <view class="service-selector">
+    <picker bindchange="onServiceChange" value="{{0}}" range="{{services}}" range-key="name">
+      <view class="picker">
+        当前选择：{{services[serviceId-1].name}}
+      </view>
+    </picker>
   </view>
 
-  <view class="tab-bar">
-    <view class="{{currentTab === 'basic' ? 'tab-item active' : 'tab-item'}}" bindtap="switchTab" data-tab="basic">基本信息</view>
-    <view class="{{currentTab === 'analysis' ? 'tab-item active' : 'tab-item'}}" bindtap="switchTab" data-tab="analysis">分析建议</view>
-    <view class="{{currentTab === 'materials' ? 'tab-item active' : 'tab-item'}}" bindtap="switchTab" data-tab="materials">导读材料</view>
+  <view class="input-section">
+    <textarea placeholder="请输入您要发送的内容" value="{{inputText}}" bindinput="onInputChange" class="input-area"></textarea>
   </view>
 
-  <view class="content-area" wx:if="{{currentTab === 'basic'}}">
-    <view class="info-section">
-      <view class="section-title">
-        孩子信息
-        <view class="add-btn" bindtap="addChild">+</view>
-      </view>
-      
-      <view class="child-item" wx:for="{{children}}" wx:key="index">
-        <view class="child-number">{{index + 1}}</view>
-        <view class="gender-select">
-          <view class="{{item.gender === '男' ? 'gender-btn active' : 'gender-btn'}}" 
-                bindtap="setGender" data-index="{{index}}" data-gender="男">男</view>
-          <view class="{{item.gender === '女' ? 'gender-btn active' : 'gender-btn'}}" 
-                bindtap="setGender" data-index="{{index}}" data-gender="女">女</view>
-        </view>
-        <input class="age-input" placeholder="年龄" type="number" bindinput="setAge" data-index="{{index}}" value="{{item.age}}"/>
-        <view class="delete-btn" bindtap="deleteChild" data-index="{{index}}" wx:if="{{children.length > 1}}">×</view>
-      </view>
-    </view>
-
-    <view class="info-section">
-      <view class="section-title">目的地</view>
-      <view class="location-inputs">
-        <picker mode="selector" range="{{locationTypes}}" bindchange="setLocationType">
-          <view class="location-picker">场景: {{selectedLocationType || '请选择'}}</view>
-        </picker>
-        <picker mode="selector" range="{{locationNames}}" bindchange="setLocationName">
-          <view class="location-picker">场所: {{selectedLocationName || '请选择'}}</view>
-        </picker>
-      </view>
-    </view>
-
-    <view class="info-section">
-      <view class="section-title">游览时长</view>
-      <view class="duration-options">
-        <view class="{{duration === '2h' ? 'duration-btn active' : 'duration-btn'}}" 
-              bindtap="setDuration" data-duration="2h">2h</view>
-        <view class="{{duration === '4h' ? 'duration-btn active' : 'duration-btn'}}" 
-              bindtap="setDuration" data-duration="4h">4h</view>
-        <view class="{{duration === '半天' ? 'duration-btn active' : 'duration-btn'}}" 
-              bindtap="setDuration" data-duration="半天">半天</view>
-        <view class="{{duration === '全天' ? 'duration-btn active' : 'duration-btn'}}" 
-              bindtap="setDuration" data-duration="全天">全天</view>
-      </view>
-    </view>
-
-    <button class="submit-btn" bindtap="generateAnalysis">生成研学分析建议</button>
+  <view class="button-group">
+    <button bindtap="sendRequest" disabled="{{isLoading}}" type="primary">发送请求</button>
+    <button bindtap="clearAll" type="default">清空</button>
   </view>
 
-  <view class="content-area" wx:if="{{currentTab === 'analysis'}}">
-    <view class="analysis-content">
-      <view class="loading-indicator" wx:if="{{isLoading && serviceId === '1'}}">
-        <text class="loading-text">正在生成分析，请稍候...</text>
-      </view>
-      <scroll-view scroll-y="true" class="response-content">
-        <text selectable="true">{{responseText}}</text>
-      </scroll-view>
-      
-      <view class="reference-options" wx:if="{{aiOptions.length > 0}}">
-        <view class="section-title">选择参考项目</view>
-        <view class="options-list">
-          <view class="option-item {{item.selected ? 'selected' : ''}}" 
-                wx:for="{{aiOptions}}" 
-                wx:key="index" 
-                bindtap="toggleOption" 
-                data-index="{{index}}">
-            <view class="option-checkbox {{item.selected ? 'checked' : ''}}"></view>
-            <view class="option-text">{{item.title}}</view>
-          </view>
-        </view>
-        <button class="generate-materials-btn" bindtap="generateMaterials">生成导读材料</button>
-      </view>
+  <view class="response-section">
+    <view class="response-title">AI响应：</view>
+    <view class="loading-indicator" wx:if="{{isLoading}}">
+      <text class="loading-text">处理中...</text>
     </view>
-  </view>
-
-  <view class="content-area" wx:if="{{currentTab === 'materials'}}">
-    <view class="materials-content">
-      <view class="loading-indicator" wx:if="{{isLoading && serviceId === '2'}}">
-        <text class="loading-text">正在生成导读材料，请稍候...</text>
-      </view>
-      <scroll-view scroll-y="true" class="response-content" wx:if="{{materialsText}}">
-        <text selectable="true">{{materialsText}}</text>
-      </scroll-view>
-      <view class="empty-materials" wx:else>
-        请先在分析建议中选择参考项目，然后点击"生成导读材料"按钮
-      </view>
-      <button class="regenerate-btn" bindtap="regenerateMaterials" wx:if="{{materialsText}}">重新生成</button>
-    </view>
+    <scroll-view scroll-y="true" class="response-content">
+      <text selectable="true">{{responseText}}</text>
+    </scroll-view>
   </view>
 </view>

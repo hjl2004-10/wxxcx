@@ -41,27 +41,54 @@ Page({
     studyTasks: [], // 研学阶段的详细任务
     studyCards: [], // 研学卡片
     planGenerated: false, // 标记研学计划是否已生成
+    showCustomVenueInput: false,
+    customVenue: '',
+    isLoading: true,
+    loadingText: '正在加载...'
   },
   
   onLoad: function (options) {
-    // 如果有传入参数指定步骤
-    if (options.step) {
-      const step = parseInt(options.step);
-      this.setData({
-        currentStep: step,
-        showBackIcon: step !== 1, // 只有研学前不显示返回按钮
-        fromOtherStep: false // 标记是否从其他步骤返回
-      });
-      this.updatePageTitle();
-    } else {
-      // 初始状态
-      this.setData({
-        fromOtherStep: false // 初始加载不是从其他步骤返回
-      });
-    }
+    // 先显示骨架屏
+    this.setData({
+      isLoading: true,
+      loadingText: '正在初始化页面...'
+    });
     
-    // 加载缓存数据
-    this.loadCachedData();
+    // 优化：使用延迟加载减少初始阻塞
+    setTimeout(() => {
+      // 如果有传入参数指定步骤
+      if (options.step) {
+        const step = parseInt(options.step);
+        this.setData({
+          currentStep: step,
+          showBackIcon: step !== 1,
+          fromOtherStep: false
+        });
+        this.updatePageTitle();
+      } else {
+        // 初始状态
+        this.setData({
+          fromOtherStep: false
+        });
+      }
+      
+      // 延迟加载缓存数据
+      this.delayLoadData();
+    }, 100);
+  },
+  
+  // 延迟加载数据，减少启动阻塞
+  delayLoadData: function() {
+    this.setData({ loadingText: '正在加载数据...' });
+    
+    // 进一步延迟加载，让UI先渲染
+    setTimeout(() => {
+      this.loadCachedData();
+      
+      setTimeout(() => {
+        this.setData({ isLoading: false });
+      }, 200);
+    }, 300);
   },
   
   // 更新页面标题
@@ -76,7 +103,7 @@ Page({
         } else if (this.data.subStep === 'suggestionDetail') {
           title = "研学前 - 建议详情";
         } else if (this.data.subStep === 'guideStory') {
-          title = "研学前 - 预研学指导";
+          title = "研学前 - 导读材料";
         }
         break;
       case 2:
@@ -140,6 +167,14 @@ Page({
   // 切换子步骤
   switchSubStep: function(e) {
     const subStep = e.currentTarget.dataset.subStep;
+    // 如果切换到导读材料但尚未生成，提示用户
+    if (subStep === 'guideStory' && !this.data.guideStory && !this.data.guideStoryNodes) {
+      wx.showToast({
+        title: '请先生成导读材料',
+        icon: 'none'
+      });
+      return;
+    }
     this.setData({
       subStep: subStep
     });
@@ -168,7 +203,8 @@ Page({
           };
         } else if (data.subStep === 'guideStory') {
           cacheData = {
-            guideStory: data.guideStory
+            guideStory: data.guideStory,
+            guideStoryNodes: data.guideStoryNodes
           };
           // 单独保存指导故事
           try {
@@ -203,68 +239,138 @@ Page({
   
   // 加载缓存数据
   loadCachedData: function() {
-    try {
-      // 加载各个步骤的数据
-      const infoData = wx.getStorageSync('studyProcess_1_info');
-      if (infoData) {
-        this.setData({
-          kidsInfo: infoData.kidsInfo || this.data.kidsInfo,
-          venueType: infoData.venueType || '',
-          specificVenue: infoData.specificVenue || '',
-          duration: infoData.duration || '2h'
-        });
-      }
-      
-      const suggestionsData = wx.getStorageSync('studyProcess_1_suggestions');
-      if (suggestionsData) {
-        let suggestions = suggestionsData.suggestions || [];
-        const selectedSuggestions = suggestionsData.selectedSuggestions || [];
-        
-        // 确保每个建议有正确的isSelected属性
-        suggestions = suggestions.map(suggestion => {
-          const isSelected = selectedSuggestions.some(item => item.id === suggestion.id);
-          return {
-            ...suggestion,
-            isSelected: isSelected
-          };
-        });
-        
-        this.setData({
-          suggestions: suggestions,
-          selectedSuggestions: selectedSuggestions,
-          showSuggestionsTab: (suggestions.length > 0),
-          stepsEnabled: (selectedSuggestions.length > 0)
-        });
-      }
-      
-      // 加载预研学指导故事
-      const guideStoryData = wx.getStorageSync('studyProcess_1_guideStory');
-      if (guideStoryData && guideStoryData.guideStory) {
-        this.setData({
-          guideStory: guideStoryData.guideStory
-        });
-      }
-      
-      const planData = wx.getStorageSync('studyProcess_2_');
-      if (planData) {
-        this.setData({
-          planTitle: planData.planTitle || '',
-          steps: planData.steps || [],
-          studyCards: planData.studyCards || [],
-          planGenerated: true // 如果有缓存的计划数据，标记为已生成
-        });
-      }
-      
-      const postData = wx.getStorageSync('studyProcess_3_');
-      if (postData) {
-        this.setData({
-          tempFilePaths: postData.tempFilePaths || [],
-          reflectionText: postData.reflectionText || ''
-        });
-      }
-    } catch (e) {
-      console.error('加载缓存数据失败:', e);
-    }
+    console.log('开始加载缓存数据');
+    
+    // 链式调用，避免同时多个异步操作
+    this.loadInfoData()
+      .then(() => this.loadSuggestionsData())
+      .then(() => this.loadGuideStoryData())
+      .then(() => this.loadPlanData())
+      .then(() => this.loadPostData())
+      .catch(err => {
+        console.error('加载缓存数据失败:', err);
+      });
+  },
+  
+  // 加载基本信息数据
+  loadInfoData: function() {
+    return new Promise((resolve) => {
+      wx.getStorage({
+        key: 'studyProcess_1_info',
+        success: (res) => {
+          const infoData = res.data;
+          if (infoData) {
+            this.setData({
+              kidsInfo: infoData.kidsInfo || this.data.kidsInfo,
+              venueType: infoData.venueType || '',
+              specificVenue: infoData.specificVenue || '',
+              duration: infoData.duration || '2h'
+            });
+          }
+        },
+        complete: () => {
+          resolve();
+        }
+      });
+    });
+  },
+  
+  // 加载研学建议数据
+  loadSuggestionsData: function() {
+    return new Promise((resolve) => {
+      wx.getStorage({
+        key: 'studyProcess_1_suggestions',
+        success: (res) => {
+          if (res.data) {
+            let suggestions = res.data.suggestions || [];
+            const selectedSuggestions = res.data.selectedSuggestions || [];
+            
+            // 确保每个建议有正确的isSelected属性
+            suggestions = suggestions.map(suggestion => {
+              const isSelected = selectedSuggestions.some(item => item.id === suggestion.id);
+              return {
+                ...suggestion,
+                isSelected: isSelected
+              };
+            });
+            
+            this.setData({
+              suggestions: suggestions,
+              selectedSuggestions: selectedSuggestions,
+              stepsEnabled: (selectedSuggestions.length > 0)
+            });
+          }
+        },
+        complete: () => {
+          resolve();
+        }
+      });
+    });
+  },
+  
+  // 加载预研学指导故事
+  loadGuideStoryData: function() {
+    return new Promise((resolve) => {
+      wx.getStorage({
+        key: 'studyProcess_1_guideStory',
+        success: (res) => {
+          const guideStoryData = res.data;
+          if (guideStoryData && guideStoryData.guideStory) {
+            this.setData({
+              guideStory: guideStoryData.guideStory,
+              guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory)
+            });
+          }
+        },
+        complete: () => {
+          resolve();
+        }
+      });
+    });
+  },
+  
+  // 加载研学计划数据
+  loadPlanData: function() {
+    return new Promise((resolve) => {
+      wx.getStorage({
+        key: 'studyProcess_2_',
+        success: (res) => {
+          const planData = res.data;
+          if (planData) {
+            this.setData({
+              planTitle: planData.planTitle || '',
+              steps: planData.steps || [],
+              studyCards: planData.studyCards || [],
+              planGenerated: planData.steps && planData.steps.length > 0
+            });
+          }
+        },
+        complete: () => {
+          resolve();
+        }
+      });
+    });
+  },
+  
+  // 加载研学后数据
+  loadPostData: function() {
+    return new Promise((resolve) => {
+      wx.getStorage({
+        key: 'studyProcess_3_',
+        success: (res) => {
+          const postData = res.data;
+          if (postData) {
+            this.setData({
+              tempFilePaths: postData.tempFilePaths || [],
+              reflectionText: postData.reflectionText || ''
+            });
+          }
+        },
+        complete: () => {
+          resolve();
+        }
+      });
+    });
   },
   
   // 以下是从原页面迁移并整合的功能
@@ -302,9 +408,20 @@ Page({
   },
   
   selectVenueType: function(e) {
-    const venueTypeOptions = ['博物馆', '科技馆', '历史遗迹', '自然风光'];
+    const venueTypeOptions = ['博物馆', '科技馆', '历史遗迹', '自然风光', '自定义'];
     const index = e.detail.value;
     
+    // 判断是否自定义
+    if (venueTypeOptions[index] === '自定义') {
+      this.setData({
+        venueType: '自定义',
+        showCustomVenueInput: true,
+        specificVenueOptions: []
+      });
+      return;
+    }
+    // 关闭自定义输入
+    this.setData({ showCustomVenueInput: false });
     // 根据选择的场景类型更新相应的具体场所列表
     let specificVenueOptions = [];
     switch(venueTypeOptions[index]) {
@@ -329,6 +446,12 @@ Page({
       specificVenueOptions: specificVenueOptions,
       specificVenue: '' // 重置具体场所
     });
+  },
+  
+  // 自定义场所输入
+  onCustomVenueInput: function(e) {
+    const value = e.detail.value;
+    this.setData({ customVenue: value, specificVenue: value });
   },
   
   selectSpecificVenue: function(e) {
@@ -374,8 +497,8 @@ Page({
       `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
     ).join('；');
     
-    // 设计 JSON 输出格式的提示词，只返回 JSON 格式
-    const promptText = `请根据以下情况生成亲子研学活动的分析建议，并仅以 JSON 格式返回，JSON格式示例：
+    // 修改 AI1 提示词：返回 3~5 条建议
+    const promptText = `请根据以下情况生成 3 到 5 条亲子研学活动分析建议，并仅以 JSON 格式返回，格式示例如下：
     {
       "suggestions": [
         {
@@ -389,10 +512,10 @@ Page({
         }
       ]
     }
-    参与者情况：${kidsInfo}
-    目的地类型：${this.data.venueType || '未知场所类型'}
-    具体场所：${this.data.specificVenue || '未知场所'}
-    游览时长：${this.data.duration || '未知时长'}`;
+      参与者情况：${kidsInfo}
+      目的地类型：${this.data.venueType || '未知场所类型'}
+      具体场所：${this.data.specificVenue || '未知场所'}
+      游览时长：${this.data.duration || '未知时长'}`;
     
     console.log('开始请求AI服务1，请求文本:', promptText);
     
@@ -528,12 +651,8 @@ Page({
     // 先生成预研学指导故事
     this.generateGuideStory()
       .then(() => {
-        // 切换到预研学指导故事页面
-        this.setData({
-          subStep: 'guideStory'
-        });
-        this.updatePageTitle();
-        this.saveCurrentStepData();
+        // 自动切换到指导故事页面
+        this.switchSubStep({ currentTarget: { dataset: { subStep: 'guideStory' } } });
       })
       .catch(error => {
         console.error('生成预研学指导故事失败:', error);
@@ -610,26 +729,25 @@ Page({
           wx.hideLoading();
           console.log('指导故事生成完成, 长度:', finalText.length);
           
-          // 保存生成的故事
+          // 转换文本为 rich-text nodes
+          const storyText = finalText || '很抱歉，无法生成预研学指导故事，但您仍然可以继续进行研学活动。';
+          const nodes = that.parseStoryText(storyText);
           that.setData({
-            guideStory: finalText || '很抱歉，无法生成预研学指导故事，但您仍然可以继续进行研学活动。',
-            stepsEnabled: true // 确保下一步可用
+            guideStoryNodes: nodes,
+            stepsEnabled: true
           });
           
           // 特别保存指导故事到Storage
           try {
             wx.setStorageSync('studyProcess_1_guideStory', {
-              guideStory: finalText || '很抱歉，无法生成预研学指导故事，但您仍然可以继续进行研学活动。'
+              guideStory: storyText,
+              guideStoryNodes: nodes
             });
           } catch (e) {
             console.error('保存指导故事失败:', e);
           }
           
-          // 切换到故事页面
-          that.setData({
-            subStep: 'guideStory'
-          });
-          that.updatePageTitle();
+          // 切换到指导故事页面（已移到Promise.then中处理）
           that.saveCurrentStepData();
           
           resolve();
@@ -638,9 +756,72 @@ Page({
     });
   },
   
-  // 开始研学活动
+  // 辅助方法：将故事文本转换为 rich-text 节点，支持序号加粗和换行
+  parseStoryText: function(text) {
+    const lines = text.split('\n').filter(l => l.trim());
+    return lines.map(line => {
+      // 处理序号加粗
+      let match = line.match(/^(\d+[\.、]|[一二三四五六七八九十]、)/);
+      if (match) {
+        return {
+          name: 'div',
+          attrs: { class: 'story-line' },
+          children: [
+            { name: 'strong', children: [{ type: 'text', text: match[0] }] },
+            { type: 'text', text: line.slice(match[0].length) }
+          ]
+        };
+      } 
+      // 处理 **文本** 双星号加粗格式
+      else if (line.includes('**')) {
+        const parts = [];
+        let lastIndex = 0;
+        let boldStart = -1;
+        
+        // 查找所有 ** 标记位置
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i] === '*' && line[i+1] === '*') {
+            if (boldStart === -1) {
+              // 开始加粗
+              if (i > lastIndex) {
+                parts.push({ type: 'text', text: line.substring(lastIndex, i) });
+              }
+              boldStart = i;
+              i++; // 跳过第二个 *
+            } else {
+              // 结束加粗
+              const boldText = line.substring(boldStart + 2, i);
+              if (boldText) {
+                parts.push({ 
+                  name: 'strong', 
+                  children: [{ type: 'text', text: boldText }] 
+                });
+              }
+              boldStart = -1;
+              lastIndex = i + 2;
+              i++; // 跳过第二个 *
+            }
+          }
+        }
+        
+        // 添加最后一部分文本
+        if (lastIndex < line.length) {
+          parts.push({ type: 'text', text: line.substring(lastIndex) });
+        }
+        
+        return {
+          name: 'div',
+          attrs: { class: 'story-line' },
+          children: parts
+        };
+      } else {
+        return { name: 'div', attrs: { class: 'story-line' }, children: [{ type: 'text', text: line }] };
+      }
+    });
+  },
+  
+  // 从导读材料页直接开始研学活动
   startStudyActivity: function() {
-    // 使用第三个AI生成研学计划，不再并发调用
     this.generateStudyPlan();
   },
   
@@ -688,10 +869,10 @@ Page({
     {"title": "研学卡片1", "content": "卡片内容"}
   ]
 }
-目的地类型：${that.data.venueType}
-具体场所：${that.data.specificVenue}
-时长：${that.data.duration}
-参与者：${kidsInfo}
+      目的地类型：${that.data.venueType}
+      具体场所：${that.data.specificVenue}
+      时长：${that.data.duration}
+      参与者：${kidsInfo}
 用户选择的研学建议：${suggestionsText}
 指导故事：${that.data.guideStory}`;
   
@@ -907,10 +1088,10 @@ Page({
         
         if (res.statusCode !== 200) {
           console.error('请求失败，状态码:', res.statusCode);
-          wx.showToast({
+        wx.showToast({
             title: `请求失败: ${res.statusCode}`,
-            icon: 'none'
-          });
+          icon: 'none'
+        });
           that.setData({ isLoadingMore: false });
           if (onComplete) onComplete(`请求失败: ${res.statusCode}`);
           return;
@@ -938,16 +1119,16 @@ Page({
           });
           that.setData({ isLoadingMore: false });
           if (onComplete) onComplete("获取AI回复失败");
-          return;
-        }
-        
+                return;
+              }
+              
         console.log('AI返回内容:', content.substring(0, 100) + '...');
         
         // 根据不同服务ID处理内容
         if (serviceId === '1') {
           // 研学前 - 处理建议
           that.handlePlainTextSuggestions(content);
-          that.setData({
+                  that.setData({
             isLoadingMore: false,
             showSuggestionsTab: true,
             subStep: 'suggestions'
@@ -956,13 +1137,13 @@ Page({
           // 处理指导故事
           that.setData({
             guideStory: content,
-            isLoadingMore: false
-          });
+                    isLoadingMore: false
+                  });
           try {
             wx.setStorageSync('studyProcess_1_guideStory', {
               guideStory: content
             });
-          } catch (e) {
+                  } catch (e) {
             console.error('保存指导故事失败:', e);
           }
         } else if (serviceId === '3') {
