@@ -43,52 +43,27 @@ Page({
     planGenerated: false, // 标记研学计划是否已生成
     showCustomVenueInput: false,
     customVenue: '',
-    isLoading: true,
-    loadingText: '正在加载...'
   },
   
   onLoad: function (options) {
-    // 先显示骨架屏
-    this.setData({
-      isLoading: true,
-      loadingText: '正在初始化页面...'
-    });
+    // 如果有传入参数指定步骤
+    if (options.step) {
+      const step = parseInt(options.step);
+      this.setData({
+        currentStep: step,
+        showBackIcon: step !== 1, // 只有研学前不显示返回按钮
+        fromOtherStep: false // 标记是否从其他步骤返回
+      });
+      this.updatePageTitle();
+    } else {
+      // 初始状态
+      this.setData({
+        fromOtherStep: false // 初始加载不是从其他步骤返回
+      });
+    }
     
-    // 优化：使用延迟加载减少初始阻塞
-    setTimeout(() => {
-      // 如果有传入参数指定步骤
-      if (options.step) {
-        const step = parseInt(options.step);
-        this.setData({
-          currentStep: step,
-          showBackIcon: step !== 1,
-          fromOtherStep: false
-        });
-        this.updatePageTitle();
-      } else {
-        // 初始状态
-        this.setData({
-          fromOtherStep: false
-        });
-      }
-      
-      // 延迟加载缓存数据
-      this.delayLoadData();
-    }, 100);
-  },
-  
-  // 延迟加载数据，减少启动阻塞
-  delayLoadData: function() {
-    this.setData({ loadingText: '正在加载数据...' });
-    
-    // 进一步延迟加载，让UI先渲染
-    setTimeout(() => {
-      this.loadCachedData();
-      
-      setTimeout(() => {
-        this.setData({ isLoading: false });
-      }, 200);
-    }, 300);
+    // 加载缓存数据
+    this.loadCachedData();
   },
   
   // 更新页面标题
@@ -239,138 +214,68 @@ Page({
   
   // 加载缓存数据
   loadCachedData: function() {
-    console.log('开始加载缓存数据');
-    
-    // 链式调用，避免同时多个异步操作
-    this.loadInfoData()
-      .then(() => this.loadSuggestionsData())
-      .then(() => this.loadGuideStoryData())
-      .then(() => this.loadPlanData())
-      .then(() => this.loadPostData())
-      .catch(err => {
-        console.error('加载缓存数据失败:', err);
-      });
-  },
-  
-  // 加载基本信息数据
-  loadInfoData: function() {
-    return new Promise((resolve) => {
-      wx.getStorage({
-        key: 'studyProcess_1_info',
-        success: (res) => {
-          const infoData = res.data;
-          if (infoData) {
-            this.setData({
-              kidsInfo: infoData.kidsInfo || this.data.kidsInfo,
-              venueType: infoData.venueType || '',
-              specificVenue: infoData.specificVenue || '',
-              duration: infoData.duration || '2h'
-            });
-          }
-        },
-        complete: () => {
-          resolve();
-        }
-      });
-    });
-  },
-  
-  // 加载研学建议数据
-  loadSuggestionsData: function() {
-    return new Promise((resolve) => {
-      wx.getStorage({
-        key: 'studyProcess_1_suggestions',
-        success: (res) => {
-          if (res.data) {
-            let suggestions = res.data.suggestions || [];
-            const selectedSuggestions = res.data.selectedSuggestions || [];
-            
-            // 确保每个建议有正确的isSelected属性
-            suggestions = suggestions.map(suggestion => {
-              const isSelected = selectedSuggestions.some(item => item.id === suggestion.id);
-              return {
-                ...suggestion,
-                isSelected: isSelected
-              };
-            });
-            
-            this.setData({
-              suggestions: suggestions,
-              selectedSuggestions: selectedSuggestions,
-              stepsEnabled: (selectedSuggestions.length > 0)
-            });
-          }
-        },
-        complete: () => {
-          resolve();
-        }
-      });
-    });
-  },
-  
-  // 加载预研学指导故事
-  loadGuideStoryData: function() {
-    return new Promise((resolve) => {
-      wx.getStorage({
-        key: 'studyProcess_1_guideStory',
-        success: (res) => {
-          const guideStoryData = res.data;
-          if (guideStoryData && guideStoryData.guideStory) {
-            this.setData({
-              guideStory: guideStoryData.guideStory,
-              guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory)
-            });
-          }
-        },
-        complete: () => {
-          resolve();
-        }
-      });
-    });
-  },
-  
-  // 加载研学计划数据
-  loadPlanData: function() {
-    return new Promise((resolve) => {
-      wx.getStorage({
-        key: 'studyProcess_2_',
-        success: (res) => {
-          const planData = res.data;
-          if (planData) {
-            this.setData({
-              planTitle: planData.planTitle || '',
-              steps: planData.steps || [],
-              studyCards: planData.studyCards || [],
-              planGenerated: planData.steps && planData.steps.length > 0
-            });
-          }
-        },
-        complete: () => {
-          resolve();
-        }
-      });
-    });
-  },
-  
-  // 加载研学后数据
-  loadPostData: function() {
-    return new Promise((resolve) => {
-      wx.getStorage({
-        key: 'studyProcess_3_',
-        success: (res) => {
-          const postData = res.data;
-          if (postData) {
-            this.setData({
-              tempFilePaths: postData.tempFilePaths || [],
-              reflectionText: postData.reflectionText || ''
-            });
-          }
-        },
-        complete: () => {
-          resolve();
-        }
-      });
-    });
+    try {
+      // 加载各个步骤的数据
+      const infoData = wx.getStorageSync('studyProcess_1_info');
+      if (infoData) {
+        this.setData({
+          kidsInfo: infoData.kidsInfo || this.data.kidsInfo,
+          venueType: infoData.venueType || '',
+          specificVenue: infoData.specificVenue || '',
+          duration: infoData.duration || '2h'
+        });
+      }
+      
+      const suggestionsData = wx.getStorageSync('studyProcess_1_suggestions');
+      if (suggestionsData) {
+        let suggestions = suggestionsData.suggestions || [];
+        const selectedSuggestions = suggestionsData.selectedSuggestions || [];
+        
+        // 确保每个建议有正确的isSelected属性
+        suggestions = suggestions.map(suggestion => {
+          const isSelected = selectedSuggestions.some(item => item.id === suggestion.id);
+          return {
+            ...suggestion,
+            isSelected: isSelected
+          };
+        });
+        
+        this.setData({
+          suggestions: suggestions,
+          selectedSuggestions: selectedSuggestions,
+          stepsEnabled: (selectedSuggestions.length > 0)
+        });
+      }
+      
+      // 加载预研学指导故事
+      const guideStoryData = wx.getStorageSync('studyProcess_1_guideStory');
+      if (guideStoryData && guideStoryData.guideStory) {
+        this.setData({
+          guideStory: guideStoryData.guideStory,
+          guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory)
+        });
+      }
+      
+      const planData = wx.getStorageSync('studyProcess_2_');
+      if (planData) {
+        this.setData({
+          planTitle: planData.planTitle || '',
+          steps: planData.steps || [],
+          studyCards: planData.studyCards || [],
+          planGenerated: true // 如果有缓存的计划数据，标记为已生成
+        });
+      }
+      
+      const postData = wx.getStorageSync('studyProcess_3_');
+      if (postData) {
+        this.setData({
+          tempFilePaths: postData.tempFilePaths || [],
+          reflectionText: postData.reflectionText || ''
+        });
+      }
+    } catch (e) {
+      console.error('加载缓存数据失败:', e);
+    }
   },
   
   // 以下是从原页面迁移并整合的功能
