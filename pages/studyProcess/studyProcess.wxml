@@ -118,6 +118,10 @@
           <view class="suggestion-footer">
             <view class="suggestion-age">适合年龄: {{item.ageRange}}</view>
             <view class="view-detail" catchtap="viewSuggestionDetail" data-index="{{index}}">查看详情</view>
+            <!-- 语音播放按钮 -->
+            <view class="audio-btn" catchtap="togglePlayAudio" data-id="suggestion_{{index}}" data-text="{{item.title}}。{{item.description}}">
+              <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_'+index ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
+            </view>
           </view>
         </view>
       </block>
@@ -141,11 +145,19 @@
     <view class="detail-card" wx:if="{{currentSuggestion}}">
       <view class="detail-header">
         <text class="detail-title">{{currentSuggestion.title}}</text>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-detail" catchtap="togglePlayAudio" data-id="suggestion_detail" data-text="{{currentSuggestion.title}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_detail' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
+        </view>
       </view>
       
       <view class="detail-section">
         <view class="detail-section-title">建议描述</view>
         <view class="detail-desc">{{currentSuggestion.description}}</view>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_desc" data-text="{{currentSuggestion.description}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_desc' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
+        </view>
       </view>
       
       <view class="detail-section">
@@ -156,24 +168,40 @@
       <view class="detail-section">
         <view class="detail-section-title">学习目标</view>
         <view class="detail-text">{{currentSuggestion.learningGoals}}</view>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_goals" data-text="{{currentSuggestion.learningGoals}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_goals' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
+        </view>
       </view>
 
       <!-- 添加导读材料板块 -->
       <view class="detail-section" wx:if="{{currentSuggestion.readingMaterials}}">
         <view class="detail-section-title">导读材料</view>
         <view class="detail-text">{{currentSuggestion.readingMaterials}}</view>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_materials" data-text="{{currentSuggestion.readingMaterials}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_materials' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
+        </view>
       </view>
 
       <!-- 如果有玩法流程，显示它 -->
       <view class="detail-section" wx:if="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
         <view class="detail-section-title">玩法流程</view>
         <view class="detail-text">{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}</view>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_process" data-text="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_process' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
+        </view>
       </view>
       
       <!-- 如果有高阶思维带动点，显示它 -->
       <view class="detail-section" wx:if="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
         <view class="detail-section-title">高阶思维带动点</view>
         <view class="detail-text">{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}</view>
+        <!-- 语音播放按钮 -->
+        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_thinking" data-text="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_thinking' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
+        </view>
       </view>
     </view>
     
@@ -191,9 +219,36 @@
   <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideStory'}}">
     <view class="story-container">
       <view class="story-card">
+        <view class="story-header">
+          <text class="story-title">导读材料</text>
+          <!-- 语音播放按钮 -->
+          <view class="audio-btn-story" catchtap="togglePlayAudio" data-id="guide_story" data-text="{{guideStory}}">
+            <image src="{{isPlayingAudio && currentPlayingId === 'guide_story' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
+            <text class="audio-text">{{isPlayingAudio && currentPlayingId === 'guide_story' ? '暂停播放' : '语音播报'}}</text>
+          </view>
+        </view>
         <view class="story-content">
           <rich-text nodes="{{guideStoryNodes}}" wx:if="{{guideStoryNodes}}" />
           <view wx:else>{{guideStory || '暂无导读材料，请先在"分析建议"中选择建议并生成'}}</view>
+        </view>
+        
+        <!-- 添加故事插图部分 -->
+        <view class="story-image-container" wx:if="{{storyImageUrl || isLoadingImage}}">
+          <view class="story-image-title">故事插图</view>
+          <!-- 加载中显示 -->
+          <view class="image-loading" wx:if="{{isLoadingImage && !storyImageUrl}}">
+            <view class="spinner"></view>
+            <text>正在生成故事插图，可能需要较长时间...</text>
+            <text class="loading-tips">请耐心等待，图片生成大约需要1-2分钟</text>
+          </view>
+          <!-- 图片显示 -->
+          <image 
+            wx:if="{{storyImageUrl}}" 
+            src="{{storyImageUrl}}" 
+            mode="widthFix" 
+            class="story-image"
+            binderror="handleImageError"
+            bindload="handleImageLoaded"></image>
         </view>
       </view>
       
@@ -201,7 +256,10 @@
     </view>
     
     <view class="primary-btn" bindtap="startStudyActivity" wx:if="{{guideStoryNodes || guideStory}}">开始研学活动</view>
-    <view class="primary-btn" bindtap="generateGuideStory" wx:elif="{{selectedSuggestions.length > 0}}">生成导读材料</view>
+    <view class="primary-btn" bindtap="generateGuideStory" wx:elif="{{selectedSuggestions.length > 0}}">
+      生成导读材料
+      <text class="btn-tips" wx:if="{{!guideStory && !guideStoryNodes}}">（生成过程可能需要1-2分钟）</text>
+    </view>
     <view class="secondary-btn" bindtap="switchSubStep" data-sub-step="suggestions" wx:else>先选择研学建议</view>
   </view>
 
@@ -227,7 +285,7 @@
         
         <view class="study-cards">
           <block wx:for="{{studyCards}}" wx:key="index">
-            <view class="study-card">
+            <view class="study-card" style="border-left-color: {{item.borderColor || '#4caf50'}};">
               <view class="study-card-title">{{item.title}}</view>
               <text class="study-card-content">{{item.content}}</text>
             </view>

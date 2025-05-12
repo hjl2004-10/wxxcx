@@ -123,10 +123,14 @@
   height: 80rpx;
   display: flex;
   background-color: #FFF2D4;
-  margin: 20rpx;
+  margin: 20rpx 20rpx 30rpx;
   border-radius: 12rpx;
   box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
   overflow: hidden;
+  box-sizing: border-box;
+  width: calc(100% - 40rpx);
+  position: relative;
+  z-index: 10;
 }
 
 .sub-step {
@@ -137,6 +141,7 @@
   position: relative;
   transition: all 0.3s;
   color: #666;
+  padding: 0 4rpx;
 }
 
 .sub-step.active {
@@ -144,6 +149,12 @@
   color: #fff;
   font-weight: bold;
   box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1) inset;
+}
+
+/* 禁用子步骤样式 */
+.sub-step.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* 内容容器统一样式 */
@@ -535,7 +546,33 @@
   position: relative;
   top: 0; /* 确保不会偏移 */
   overflow-y: auto;
-  max-height: calc(100vh - 94px); /* 减去头部高度，确保内容可滚动 */
+  max-height: calc(100vh - 200rpx); /* 减去头部高度，确保内容可滚动 */
+  margin-bottom: 0; /* 确保底部没有额外的边距 */
+  margin-top: 0;
+  z-index: 5;
+}
+
+/* 分析建议相关样式 */
+.suggestion-tips {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  margin-top: 10rpx;
+  padding: 5px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* 确保各个子标签内容区域正常显示，不被覆盖，并统一内边距 */
+.common-content[hidden="{{currentStep != 1 || subStep != 'info'}}"],
+.common-content[hidden="{{currentStep != 1 || subStep != 'suggestions'}}"],
+.common-content[hidden="{{currentStep != 1 || subStep != 'guideStory'}}"] {
+  margin-top: 40rpx;
+  position: relative;
+  z-index: 5;
+  padding-top: 20rpx;
 }
 
 /* 子选项卡样式优化 */
@@ -672,7 +709,7 @@
   background-color: rgba(255, 242, 212, 0.8);
   border-radius: 8px;
   padding: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
@@ -832,18 +869,6 @@
   margin-top: auto; /* 将按钮推到底部 */
   margin-bottom: 15px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* 分析建议相关样式 */
-.suggestion-tips {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding: 5px 0;
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
 }
 
 .loading-indicator {
@@ -1049,14 +1074,23 @@
 /* 预研学指导故事相关样式 */
 .story-container {
   padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 20rpx auto 0;
+  position: relative;
 }
 
 .story-card {
-  background-color: #fff;
+  background-color: #FFF2D4;
   border-radius: 12px;
   padding: 15px;
   margin-bottom: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .story-content {
@@ -1075,6 +1109,7 @@
   color: #888;
   font-size: 14px;
   margin: 15px 0;
+  width: 100%;
 }
 
 /* 研学卡片相关样式 */
@@ -1083,6 +1118,7 @@
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
+  width: 100%;
 }
 
 .study-card {
@@ -1090,6 +1126,9 @@
   border-radius: 8px;
   padding: 12px;
   border-left: 4px solid #4caf50;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .study-card-title {
@@ -1235,4 +1274,212 @@
 /* 流式生成内容样式优化 */
 .story-content {
   min-height: 200rpx;
+}
+
+/* 语音播放按钮样式 */
+.audio-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10rpx;
+}
+
+.audio-btn-detail {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  padding: 6rpx 12rpx;
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 30rpx;
+  display: flex;
+  align-items: center;
+}
+
+.audio-btn-inline {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10rpx;
+  vertical-align: middle;
+  padding: 4rpx 10rpx;
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 20rpx;
+}
+
+.audio-btn-story {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx 16rpx;
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 30rpx;
+  position: absolute;
+  right: 20rpx;
+}
+
+.audio-icon {
+  width: 40rpx;
+  height: 40rpx;
+  vertical-align: middle;
+}
+
+.audio-icon-small {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.audio-text {
+  font-size: 24rpx;
+  margin-left: 6rpx;
+  color: #666;
+  vertical-align: middle;
+  line-height: 40rpx;
+  display: inline-block;
+}
+
+/* 故事标题行样式 */
+.story-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+  padding: 0 20rpx;
+  position: relative;
+}
+
+.story-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #E6A23C;
+}
+
+/* 修改建议详情头部样式使其支持绝对定位 */
+.detail-header {
+  position: relative;
+  padding-right: 80rpx; /* 为按钮留出空间 */
+}
+
+/* 修改建议项的底部行，使其能容纳语音按钮 */
+.suggestion-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 使建议的年龄信息宽度收缩 */
+.suggestion-age {
+  flex-shrink: 1;
+  min-width: 120rpx;
+}
+
+/* 故事插图相关样式 */
+.story-image-container {
+  margin-top: 20rpx;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.story-image-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #E6A23C;
+  margin-bottom: 16rpx;
+}
+
+.image-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+  width: 100%;
+}
+
+.image-loading .spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(230, 162, 60, 0.2);
+  border-top-color: #E6A23C;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16rpx;
+}
+
+.image-loading text {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.story-image {
+  width: 100%;
+  max-width: 600rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-tips {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 10rpx;
+  text-align: center;
+  background-color: rgba(246, 164, 22, 0.1);
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  width: 80%;
+}
+
+.btn-tips {
+  font-size: 24rpx;
+  font-weight: normal;
+  color: #999;
+  margin-left: 6rpx;
+}
+
+/* 调整子步骤标签和内容区域之间的空间 */
+.sub-step-tabs {
+  margin-bottom: 10rpx;
+}
+
+/* 确保分析建议列表不会覆盖上方内容 */
+.suggestion-list {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 15px;
+  margin-top: 20rpx;
+  position: relative;
+}
+
+/* 确保导读材料容器不会覆盖 */
+.story-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 20rpx auto 0;
+  position: relative;
+}
+
+/* 解决导读材料下方按钮居中问题 */
+.common-content[hidden="{{currentStep != 1 || subStep != 'guideStory'}}"] .primary-btn,
+.common-content[hidden="{{currentStep != 1 || subStep != 'guideStory'}}"] .secondary-btn {
+  width: calc(100% - 20px);
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  text-align: center;
+}
+
+/* 基本信息页面内容区域额外样式 */
+.common-content.no-scroll {
+  padding-top: 30rpx;
 }

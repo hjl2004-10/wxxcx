@@ -12,7 +12,7 @@ Page({
     isLoading: false, // 是否正在加载
     error: '', // 错误信息
     services: [
-      { id: '4', name: '目的地咨询' },
+      { id: '1', name: '目的地咨询' },
       { id: '2', name: '研学技巧问答' },
       { id: '3', name: '第三个AI服务' }
     ],

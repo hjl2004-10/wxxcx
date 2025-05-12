@@ -43,6 +43,16 @@ Page({
     planGenerated: false, // 标记研学计划是否已生成
     showCustomVenueInput: false,
     customVenue: '',
+
+    // 语音播放相关
+    isPlayingAudio: false, // 是否正在播放语音
+    audioContext: null, // 音频上下文
+    currentPlayingId: '', // 当前播放的文本ID
+    playingText: '', // 当前播放的文本内容
+
+    // 图片生成相关
+    storyImageUrl: '', // 故事相关图片URL
+    isLoadingImage: false, // 是否正在加载图片
   },
   
   onLoad: function (options) {
@@ -64,6 +74,9 @@ Page({
     
     // 加载缓存数据
     this.loadCachedData();
+    
+    // 创建播放和暂停图标
+    this.createAudioIcons();
   },
   
   // 更新页面标题
@@ -229,16 +242,32 @@ Page({
       const suggestionsData = wx.getStorageSync('studyProcess_1_suggestions');
       if (suggestionsData) {
         let suggestions = suggestionsData.suggestions || [];
-        const selectedSuggestions = suggestionsData.selectedSuggestions || [];
+        let selectedSuggestions = suggestionsData.selectedSuggestions || [];
         
-        // 确保每个建议有正确的isSelected属性
-        suggestions = suggestions.map(suggestion => {
-          const isSelected = selectedSuggestions.some(item => item.id === suggestion.id);
-          return {
+        // 重置所有建议的选中状态
+        suggestions = suggestions.map(suggestion => ({
             ...suggestion,
-            isSelected: isSelected
-          };
-        });
+          isSelected: false
+        }));
+        
+        // 只标记真正被选中的建议
+        for (let i = 0; i < suggestions.length; i++) {
+          const isSelected = selectedSuggestions.some(item => item.id === suggestions[i].id);
+          if (isSelected) {
+            suggestions[i].isSelected = true;
+          }
+        }
+        
+        // 重建选中的建议列表，确保与 suggestions 中的选中状态一致
+        selectedSuggestions = [];
+        for (let i = 0; i < suggestions.length; i++) {
+          if (suggestions[i].isSelected) {
+            selectedSuggestions.push(suggestions[i]);
+          }
+        }
+        
+        console.log('从缓存加载的建议数量:', suggestions.length);
+        console.log('从缓存加载的已选择建议数量:', selectedSuggestions.length);
         
         this.setData({
           suggestions: suggestions,
@@ -252,7 +281,8 @@ Page({
       if (guideStoryData && guideStoryData.guideStory) {
         this.setData({
           guideStory: guideStoryData.guideStory,
-          guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory)
+          guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory),
+          storyImageUrl: guideStoryData.imageUrl || ''  // 加载故事图片URL
         });
       }
       
@@ -506,24 +536,26 @@ Page({
     }
 
     const suggestions = this.data.suggestions;
-    const selectedSuggestions = [...this.data.selectedSuggestions];
+    // 清空已选择的建议数组，重建一个全新的数组，确保只包含用户选择的建议
+    let selectedSuggestions = [];
     
     console.log('切换选择状态:', index, suggestions[index].title, '当前状态:', suggestions[index].isSelected);
     
     // 更新建议的选中状态
     suggestions[index].isSelected = !suggestions[index].isSelected;
     
-    // 更新已选择的建议列表
-    if (suggestions[index].isSelected) {
-      // 如果被选中，添加到已选择列表
-      selectedSuggestions.push(suggestions[index]);
-    } else {
-      // 如果取消选中，从已选择列表中移除
-      const removeIndex = selectedSuggestions.findIndex(item => item.id === suggestions[index].id);
-      if (removeIndex > -1) {
-        selectedSuggestions.splice(removeIndex, 1);
+    // 重建已选择的建议列表
+    for (let i = 0; i < suggestions.length; i++) {
+      if (suggestions[i].isSelected) {
+        selectedSuggestions.push(suggestions[i]);
       }
     }
+    
+    // 打印诊断信息
+    console.log('已选择建议数量:', selectedSuggestions.length);
+    selectedSuggestions.forEach((suggestion, idx) => {
+      console.log(`已选择建议 ${idx+1}:`, suggestion.title);
+    });
     
     // 如果当前正在查看详情的建议，也要更新其状态
     let currentSuggestion = this.data.currentSuggestion;
@@ -571,93 +603,248 @@ Page({
   generateGuideStory: function() {
     const that = this;
     
-    // 显示加载状态
+    // 如果未选择任何研学建议，显示提示
+    if (that.data.selectedSuggestions.length === 0) {
+      wx.showToast({
+        title: '请先选择研学建议',
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
+    
+    // 检查是否需要基本信息
+    if (!that.data.specificVenue || !that.data.venueType) {
+      wx.showToast({
+        title: '请先完善基本信息',
+        icon: 'none',
+        duration: 2000
+      });
+      // 切换到信息页面
+      that.setData({
+        subStep: 'info'
+      });
+      return;
+    }
+    
+    // 显示加载提示
     wx.showLoading({
-      title: '生成预研学指导中...',
+      title: '正在生成导读材料...',
+      mask: true
     });
     
+    // 设置计划生成超时提示
+    const storyTimeoutId = setTimeout(() => {
+      wx.showToast({
+        title: '导读材料生成中，请耐心等待',
+        icon: 'none',
+        duration: 3000
+      });
+    }, 30000); // 30秒后提示
+    
+    // 确保有指导故事的字段
+    that.setData({
+      guideStory: '',
+      guideStoryNodes: null,
+      storyImageUrl: '',
+      isLoadingImage: false
+    });
+    
+    // 构造AI提示
+    const kidsInfo = that.data.kidsInfo.map(kid => 
+      `孩子${kid.id}: ${kid.gender === 'male' ? '男' : '女'}, ${kid.age}岁`
+    ).join('\n');
+    
+    const selectedSuggestions = that.data.selectedSuggestions.map(suggestion => 
+      suggestion.title + ': ' + suggestion.description
+    ).join('\n\n');
+    
+    // 构建简明提示文本
+    const promptText = 
+`你是一位经验丰富的研学导师，请为以下研学活动创作一篇导读材料。
+研学场所类型: ${that.data.venueType}
+具体场所: ${that.data.specificVenue}
+参与者: ${kidsInfo}
+研学建议: ${selectedSuggestions}
+
+请创作一篇有教育意义的导读材料，向家长介绍如何指导孩子进行这次研学活动。内容包括:
+1. 简要介绍研学场所的特点和教育价值
+2. 针对该场所的研学要点和注意事项
+3. 如何引导孩子观察和思考
+4. 提供2-3个互动问题，帮助家长引导孩子
+5. 总结这次研学可能获得的收获
+
+格式要求：
+- 分段清晰，每段都有明确的序号
+- 使用简单直接的语言
+- 内容约800-1000字
+- 可使用"**加粗内容**"标记重点内容`;
+    
+    console.log('开始生成研学指导故事，请求内容:', promptText);
+    
+    // 请求第二个AI模型
     return new Promise((resolve, reject) => {
-      // 构建请求文本 - 使用用户选择的所有建议
-      const selectedSuggestions = that.data.selectedSuggestions;
-      if (selectedSuggestions.length === 0) {
-        wx.hideLoading();
-        wx.showToast({
-          title: '请至少选择一个研学建议',
-          icon: 'none'
-        });
-        reject(new Error('没有选择研学建议'));
-        return;
-      }
-
-      // 合并所有选择的建议
-      const suggestionsText = selectedSuggestions.map((suggestion, index) => {
-        return `研学建议${index+1}：
-        主题：${suggestion.title || ''}
-        描述：${suggestion.description || ''}
-        学习目标：${suggestion.learningGoals || ''}`;
-      }).join('\n\n');
-
-      const kidsInfo = that.data.kidsInfo.map(kid => 
-        `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
-      ).join('；');
-      
-      const promptText = `
-        目的地类型：${that.data.venueType}
-        具体场所：${that.data.specificVenue}
-        时长：${that.data.duration}
-        参与者：${kidsInfo}
-        
-        用户选择的研学建议：
-        ${suggestionsText}
-        
-        请基于以上信息，生成一个生动有趣的预研学指导故事，故事中要包含导读材料部分，帮助家长们更好地引导孩子进行研学活动。
-`;
-      
-      console.log('向第二个AI服务发送请求，生成指导故事');
-      
-      // 发送流式请求到第二个AI
-      let storyText = '';
-      
       that.requestAIStream('2', promptText, 
-        // 处理数据块
-        function(chunk, fullText) {
-          storyText = fullText;
-          console.log('接收到故事数据块:', chunk.length, '累计字符数:', storyText.length);
+        null, // 不需要处理数据块
+        function(storyText) {
+          // 清除超时定时器
+          clearTimeout(storyTimeoutId);
           
-          // 实时更新故事内容
+          // 将文本转换为富文本
+          const storyNodes = that.parseStoryText(storyText);
+          
+          // 更新数据
           that.setData({
-            guideStory: storyText
+            guideStory: storyText,
+            guideStoryNodes: storyNodes,
+            stepsEnabled: true, // 生成故事后允许进入研学中和研学后步骤
           });
-        },
-        // 完成回调
-        function(finalText) {
+          
           wx.hideLoading();
-          console.log('指导故事生成完成, 长度:', finalText.length);
           
-          // 转换文本为 rich-text nodes
-          const storyText = finalText || '很抱歉，无法生成预研学指导故事，但您仍然可以继续进行研学活动。';
-          const nodes = that.parseStoryText(storyText);
+          // 自动切换到导读材料页面
           that.setData({
-            guideStoryNodes: nodes,
-            stepsEnabled: true
+            subStep: 'guideStory',
           });
+          that.updatePageTitle();
           
-          // 特别保存指导故事到Storage
+          // 保存导读材料到缓存
           try {
             wx.setStorageSync('studyProcess_1_guideStory', {
-              guideStory: storyText,
-              guideStoryNodes: nodes
+              story: storyText,
+              storyNodes: storyNodes
             });
           } catch (e) {
             console.error('保存指导故事失败:', e);
           }
           
-          // 切换到指导故事页面（已移到Promise.then中处理）
-          that.saveCurrentStepData();
+          // 显示图片生成提示
+          wx.showLoading({
+            title: '正在生成插图...',
+            mask: true
+          });
           
-          resolve();
+          // 生成故事关联图片
+          that.generateStoryImage(storyText)
+            .then(() => {
+              console.log('故事图片生成成功');
+              wx.hideLoading();
+            })
+            .catch(err => {
+              console.error('故事图片生成失败:', err);
+              wx.hideLoading();
+              wx.showToast({
+                title: '图片生成失败，但导读材料已生成',
+                icon: 'none',
+                duration: 2000
+              });
+            })
+            .finally(() => {
+              that.saveCurrentStepData();
+              that.setData({
+                isLoadingImage: false
+              });
+              resolve();
+            });
         }
       );
+    });
+  },
+  
+  // 生成故事配图 - 完全简化版本
+  generateStoryImage: function(storyText) {
+    const that = this;
+    
+    // 构建一个非常简短的图像生成提示
+    const imagePromptText = `为"${this.data.specificVenue || '研学场所'}"的研学故事创建一张适合儿童的插图`;
+    
+    console.log('发送简化的图片生成请求:', imagePromptText);
+    
+    return new Promise((resolve, reject) => {
+      // 显示加载状态
+      that.setData({
+        isLoadingImage: true
+      });
+      
+      // 设置图片生成超时定时器
+      const imageTimeoutId = setTimeout(() => {
+        wx.showToast({
+          title: '图片生成需要较长时间，请耐心等待',
+          icon: 'none',
+          duration: 3000
+        });
+      }, 30000); // 30秒后提示等待
+      
+      // 简化的图片生成请求
+      wx.request({
+        url: 'http://119.3.217.132:5000/pic/1',
+        method: 'POST',
+        data: {
+          text: imagePromptText,
+          key: 'hjl2004'
+        },
+        header: {
+          'Content-Type': 'application/json',
+          'X-Access-Key': 'hjl2004'
+        },
+        success: function(res) {
+          clearTimeout(imageTimeoutId);
+          console.log('图像生成响应:', res);
+          
+          // 最简单的响应处理 - 只检查最基本的条件
+          if (res.statusCode === 200 && res.data && res.data.url) {
+            console.log('成功获取图片URL:', res.data.url);
+            
+            // 保存图片URL
+            that.setData({
+              storyImageUrl: res.data.url,
+              isLoadingImage: false
+            });
+            
+            // 保存到缓存
+            try {
+              const storyData = wx.getStorageSync('studyProcess_1_guideStory') || {};
+              storyData.imageUrl = res.data.url;
+              wx.setStorageSync('studyProcess_1_guideStory', storyData);
+            } catch(e) {
+              console.error('保存图片URL失败:', e);
+            }
+            
+            resolve(res.data.url);
+          } else {
+            console.error('获取图片URL失败:', res.data);
+            that.setData({
+              isLoadingImage: false
+            });
+            
+            // 显示友好的错误提示
+            wx.showToast({
+              title: '图片生成失败，请稍后再试',
+              icon: 'none',
+              duration: 2000
+            });
+            
+            reject(new Error('获取图片URL失败'));
+          }
+        },
+        fail: function(err) {
+          clearTimeout(imageTimeoutId);
+          console.error('请求图像生成服务失败:', err);
+          
+          that.setData({
+            isLoadingImage: false
+          });
+          
+          // 显示友好的错误提示
+          wx.showToast({
+            title: '图片请求失败，网络异常',
+            icon: 'none',
+            duration: 2000
+          });
+          
+          reject(err);
+        }
+      });
     });
   },
   
@@ -751,7 +938,7 @@ Page({
       return;
     }
 
-    // 合并所有选择的建议
+    // 确保只包含用户实际选择的建议，且编号从1开始连续
     const suggestionsText = selectedSuggestions.map((suggestion, index) => {
       return `研学建议${index+1}：
       主题：${suggestion.title || ''}
@@ -762,6 +949,15 @@ Page({
     const kidsInfo = that.data.kidsInfo.map(kid => 
       `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
     ).join('；');
+    
+    // 设置超时定时器，提示用户
+    const planTimeoutId = setTimeout(() => {
+      wx.showToast({
+        title: '研学计划生成中，请耐心等待',
+        icon: 'none',
+        duration: 3000
+      });
+    }, 30000); // 30秒后提示
     
     // 设计 JSON 输出格式的提示词，只返回 JSON 格式
     const promptText = `请根据以下信息生成研学计划，并仅以 JSON 格式返回，格式示例如下：
@@ -782,11 +978,15 @@ Page({
 指导故事：${that.data.guideStory}`;
   
     console.log('向第三个AI服务发送请求，生成研学计划');
+    console.log('AI3请求内容：', promptText);
     
     // 发送请求到第三个AI
     that.requestAIStream('3', promptText, 
       null, // 不需要处理数据块
       function(finalText) {
+        // 清除超时定时器
+        clearTimeout(planTimeoutId);
+        
         wx.hideLoading();
         console.log('计划生成完成, 长度:', finalText.length);
         
@@ -987,6 +1187,7 @@ Page({
         'X-Access-Key': 'hjl2004',
         'X-Stream': 'false'
       },
+      timeout: 120000, // 增加超时时间到120秒
       success: function(res) {
         console.log('请求成功状态:', res.statusCode);
         wx.hideLoading();
@@ -1027,7 +1228,10 @@ Page({
                 return;
               }
               
-        console.log('AI返回内容:', content.substring(0, 100) + '...');
+        console.log(`AI${serviceId}返回内容开头:`, content.substring(0, 100) + '...');
+        if (serviceId === '1') {
+          console.log('AI1完整返回:', content);
+        }
         
         // 根据不同服务ID处理内容
         if (serviceId === '1') {
@@ -1063,8 +1267,9 @@ Page({
         wx.hideLoading();
         console.error('AI请求失败:', err);
         wx.showToast({
-          title: 'AI服务请求失败',
-          icon: 'none'
+          title: '请求超时或网络异常，请稍后重试',
+          icon: 'none',
+          duration: 3000
         });
         that.setData({ isLoadingMore: false });
         if (onComplete) onComplete("AI服务请求失败");
@@ -1337,11 +1542,19 @@ Page({
     console.log('从完整纯文本生成建议');
     
     // 一次性提取所有可能的建议
-    const suggestions = extractSuggestionsFromText(text);
+    let suggestions = extractSuggestionsFromText(text);
+    
+    // 确保所有建议的 isSelected 属性为 false
+    suggestions = suggestions.map(suggestion => ({
+      ...suggestion,
+      isSelected: false
+    }));
     
     if (suggestions.length > 0) {
+      console.log('成功提取建议数量:', suggestions.length);
       this.setData({
         suggestions: suggestions,
+        selectedSuggestions: [], // 清空已选择的建议
         isLoadingMore: false,
         showSuggestionsTab: true,
         subStep: 'suggestions'
@@ -1353,6 +1566,7 @@ Page({
       // 如果提取失败，仍然不使用默认建议
       this.setData({
         suggestions: [],
+        selectedSuggestions: [], // 清空已选择的建议
         isLoadingMore: false,
         showSuggestionsTab: true,
         subStep: 'suggestions'
@@ -1443,9 +1657,18 @@ Page({
     const steps = Array.isArray(data.steps)
       ? data.steps.map((item, idx) => ({ id: idx + 1, title: item.title || '', content: item.content || item.description || '' }))
       : [];
+    
+    // 确保研学卡片有正确的结构和样式
     const studyCards = Array.isArray(data.studyCards)
-      ? data.studyCards.map((item, idx) => ({ id: idx + 1, title: item.title || '', content: item.content || '' }))
+      ? data.studyCards.map((item, idx) => ({ 
+          id: idx + 1, 
+          title: item.title || '研学卡片 ' + (idx + 1), 
+          content: item.content || '',
+          // 为卡片随机分配一个颜色，确保样式生效
+          borderColor: this.getCardColor(idx)
+        }))
       : [];
+    
     this.setData({
       planTitle: planTitle,
       steps: steps,
@@ -1453,8 +1676,43 @@ Page({
       planGenerated: true,
       currentStep: 2
     });
+    
+    // 确保研学卡片容器样式正确
+    setTimeout(() => {
+      // 在DOM渲染完成后，检查研学卡片是否正确渲染
+      this.checkStudyCardsStyle();
+    }, 500);
+    
     this.saveCurrentStepData();
     this.updatePageTitle();
+  },
+  
+  // 获取卡片边框颜色
+  getCardColor: function(index) {
+    // 几种不同的颜色
+    const colors = ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#e91e63'];
+    return colors[index % colors.length];
+  },
+  
+  // 检查研学卡片样式渲染
+  checkStudyCardsStyle: function() {
+    console.log('检查研学卡片样式是否正确渲染');
+    // 直接刷新一下数据，触发重新渲染
+    if (this.data.studyCards && this.data.studyCards.length > 0) {
+      const updatedCards = this.data.studyCards.map(card => {
+        if (!card.borderColor) {
+          return {
+            ...card,
+            borderColor: this.getCardColor(card.id - 1)
+          };
+        }
+        return card;
+      });
+      
+      this.setData({
+        studyCards: updatedCards
+      });
+    }
   },
   
   // 处理纯文本形式的反思内容
@@ -1535,17 +1793,254 @@ Page({
     
     return cards;
   },
+  
+  // 语音播放相关函数
+  
+  // 初始化音频上下文
+  initAudioContext: function() {
+    if (!this.data.audioContext) {
+      const audioContext = wx.createInnerAudioContext();
+      
+      audioContext.onPlay(() => {
+        console.log('音频开始播放');
+      });
+      
+      audioContext.onError((res) => {
+        console.error('音频播放错误:', res);
+        wx.showToast({
+          title: '音频播放失败',
+          icon: 'none'
+        });
+        this.setData({
+          isPlayingAudio: false,
+          currentPlayingId: ''
+        });
+      });
+      
+      audioContext.onEnded(() => {
+        console.log('音频播放结束');
+        this.setData({
+          isPlayingAudio: false,
+          currentPlayingId: ''
+        });
+      });
+      
+      this.setData({
+        audioContext: audioContext
+      });
+    }
+  },
+  
+  // 播放或暂停文本语音
+  togglePlayAudio: function(e) {
+    // 初始化音频上下文
+    this.initAudioContext();
+    
+    const textId = e.currentTarget.dataset.id;
+    const text = e.currentTarget.dataset.text;
+    
+    // 如果已经在播放这段文本，则暂停
+    if (this.data.isPlayingAudio && this.data.currentPlayingId === textId) {
+      this.data.audioContext.pause();
+      this.setData({
+        isPlayingAudio: false,
+        currentPlayingId: ''
+      });
+      return;
+    }
+    
+    // 如果正在播放其他文本，先停止
+    if (this.data.isPlayingAudio) {
+      this.data.audioContext.stop();
+    }
+    
+    // 显示加载提示
+    wx.showLoading({
+      title: '加载语音中...',
+      mask: true
+    });
+    
+    // 设置当前播放状态
+    this.setData({
+      isPlayingAudio: true,
+      currentPlayingId: textId,
+      playingText: text
+    });
+    
+    // 请求语音服务
+    const that = this;
+    const serviceUrl = 'http://119.3.217.132:5000/spk/1';
+    
+    wx.request({
+      url: serviceUrl,
+      method: 'POST',
+      data: {
+        text: text,
+        key: 'hjl2004'
+      },
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': 'hjl2004'
+      },
+      responseType: 'arraybuffer', // 重要：接收二进制数据
+      success: function(res) {
+        wx.hideLoading();
+        
+        if (res.statusCode !== 200) {
+          console.error('语音请求失败，状态码:', res.statusCode);
+          wx.showToast({
+            title: `语音请求失败: ${res.statusCode}`,
+            icon: 'none'
+          });
+          that.setData({
+            isPlayingAudio: false,
+            currentPlayingId: ''
+          });
+          return;
+        }
+        
+        // 将二进制数据转换为临时文件
+        const fsm = wx.getFileSystemManager();
+        const tempFilePath = `${wx.env.USER_DATA_PATH}/temp_audio_${Date.now()}.mp3`;
+        
+        try {
+          fsm.writeFileSync(tempFilePath, res.data, 'binary');
+          console.log('音频文件已保存:', tempFilePath);
+          
+          // 播放音频
+          that.data.audioContext.src = tempFilePath;
+          that.data.audioContext.play();
+        } catch (error) {
+          console.error('保存或播放音频文件失败:', error);
+          wx.showToast({
+            title: '语音播放失败',
+            icon: 'none'
+          });
+          that.setData({
+            isPlayingAudio: false,
+            currentPlayingId: ''
+          });
+        }
+      },
+      fail: function(error) {
+        wx.hideLoading();
+        console.error('语音请求发送失败:', error);
+        wx.showToast({
+          title: '语音请求失败',
+          icon: 'none'
+        });
+        that.setData({
+          isPlayingAudio: false,
+          currentPlayingId: ''
+        });
+      }
+    });
+  },
+  
+  // 清理音频资源
+  onUnload: function() {
+    if (this.data.audioContext) {
+      this.data.audioContext.stop();
+      this.data.audioContext.destroy();
+    }
+  },
+  
+  // base64转图片，用于生成所需图标
+  base64ToImage: function(base64, callback) {
+    if (!base64) return;
+    
+    // 去掉 data:image/png;base64, 前缀
+    base64 = base64.replace(/^data:image\/\w+;base64,/, '');
+    
+    // 获取文件系统管理器
+    const fsm = wx.getFileSystemManager();
+    const fileName = new Date().getTime();
+    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}.png`;
+    
+    // 写入文件
+    fsm.writeFile({
+      filePath: filePath,
+      data: base64,
+      encoding: 'base64',
+      success: function() {
+        if (callback) {
+          callback(filePath);
+        }
+      },
+      fail: function(err) {
+        console.error('写入图片文件失败:', err);
+      }
+    });
+  },
+  
+  // 创建音频播放和暂停图标
+  createAudioIcons: function() {
+    const playIconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAArNJREFUaEPtmj1rFUEUhp+rUdBCjQZTKMFK0U4UNAYRRLQxKFiIjR8/QP0HNhYGbAIWgp2VnQgWRkUbaywULUXBzkIUFUVFfA/szGXv7Ozs3jRz71wzs3PmnWfOnJmZXaHlQ1rOTw2g7gzWGRhoBhasA8a2kJmtAyvAW0lf+s0vKwNm9h44CrySdDYHQC6Ay8Bd4LmkM9UgzewGcL/YX9KxZF9JXdvXHVTSwcx+A5uAG5KehP0bwIqk3TkAojYzs3XAPUmHyxuY2TBwzsyGJP0ws9vAHeBE05IIPEcl9QSQNB4BXQLOAP+AFZKmcgCU2vwBYKFY6IakR2Z2FngCHJa0lAsgAJ8GBoG3kg4WbcaBh8BhSR9zAsQs/AXGgAgqyJAVIDDxBTgF7AVmJY0UzE+AC8CkpLleHFvpU1YGzOwbsB3YJOlP0f5TcbL0I6HcAMGlfjc6ApSrUx0AvdJoZltKZfSzbwkts1RViOKi1RWgdR2wnoCZeVsQ/Z5YXB0+SorqSzILlb58SdLdsu2cfcw25ujzB2BUUT82NiwD84XI46PWLL9lAWGbeK2/A14v+JLdF48q8Ox99kq64mUgEDMrKSklyzM7uy8yNb3c3OAWitTUAUBLMuAlNK5E/wEaGUgF2Mi+0StdvGCDHzPS2lYGCE6lQzBtGiApiaQMND4DPuPW+gxUr0KNz0D1KtTE6/TqdHpMOm68Z/FxK/JZRZu2UKP6QM5nItE2aQvlrEINfCYSbau2UFINbnoVShJvawaSxPs20rQqVCXe1gwkibctAz2Jty0D3YgHW0mfswAEYnJ34t4O+Hs5dAJYkHQoC0AuoNRveQDO+wPGYGr1OYHU/SnHVwPodDJaBnrl/4qvhvbfbBteQlMBmpoP7/haC2X8Fy/wDzc/3jGwc6t0AAAAAElFTkSuQmCC";
+    
+    const pauseIconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAAJlJREFUaEPtlkEKwCAMBOO/+rJ+wByK0lKDNLCdW93NjNl1LH6Oxfrpgd0O2sAuoPzfBpQDLXOqNMpz8mDD+SSP1jIazCNSEwnoAdYErCZEizWBow0oE/ixu+OU+aZJWuOXCZ0AegKi/BIBnQJRgVaEVAfEsfoScwGUETVQRtRAGVEDZUQNlBE1UEbUQBlRA2VEDZQRf2PgAq3zUSEJYwhvAAAAAElFTkSuQmCC";
+    
+    // 生成播放图标
+    this.base64ToImage(playIconBase64, (playIconPath) => {
+      // 生成暂停图标
+      this.base64ToImage(pauseIconBase64, (pauseIconPath) => {
+        // 设置到全局数据
+        wx.setStorageSync('play_icon_path', playIconPath);
+        wx.setStorageSync('pause_icon_path', pauseIconPath);
+        
+        // 设置到数据中
+        this.setData({
+          playIconPath: playIconPath,
+          pauseIconPath: pauseIconPath
+        });
+      });
+    });
+  },
+  
+  // 图片加载成功处理
+  handleImageLoaded: function(e) {
+    console.log('故事插图加载成功');
+  },
+  
+  // 图片加载失败处理
+  handleImageError: function(e) {
+    console.error('故事插图加载失败', e);
+    wx.showToast({
+      title: '图片加载失败',
+      icon: 'none'
+    });
+    // 清除错误的图片URL
+    this.setData({
+      storyImageUrl: ''
+    });
+  }
 });
 
 // 重构 extractSuggestionsFromText，只解析 AI 返回的 JSON
 function extractSuggestionsFromText(text) {
   let suggestions = [];
   try {
-    const data = JSON.parse(text);
+    console.log('尝试解析建议 JSON，内容开头:', text.substring(0, 100));
+    
+    // 清理文本，尝试找到有效的 JSON 字符串
+    let cleanText = text.trim();
+    
+    // 查找 JSON 的起始位置和结束位置
+    const startIdx = cleanText.indexOf('{');
+    const endIdx = cleanText.lastIndexOf('}');
+    
+    if (startIdx >= 0 && endIdx > startIdx) {
+      cleanText = cleanText.substring(startIdx, endIdx + 1);
+      console.log('提取的 JSON 字符串开头:', cleanText.substring(0, 50));
+    }
+    
+    const data = JSON.parse(cleanText);
+    console.log('成功解析 JSON 数据:', Object.keys(data));
+    
     if (Array.isArray(data.suggestions)) {
+      console.log('找到建议数组，数量:', data.suggestions.length);
       suggestions = data.suggestions.map((item, index) => ({
-        id: index + 1,
-        title: item.title || '',
+            id: index + 1,
+        title: item.title || `建议${index + 1}`,
         description: item.description || '',
         ageRange: item.ageRange || '',
         learningGoals: item.learningGoals || '',
@@ -1554,9 +2049,12 @@ function extractSuggestionsFromText(text) {
         gaojieThinking: item.gaojieThinking || '',
         isSelected: false
       }));
+    } else {
+      console.warn('数据格式不包含建议数组');
     }
   } catch (e) {
-    console.error('解析建议 JSON 失败:', e);
+    console.error('解析建议 JSON 失败:', e.message);
+    console.error('原始文本开头:', text.substring(0, 200));
   }
   return suggestions;
 }

@@ -10,6 +10,13 @@
     "miniprogram": {
       "list": [
         {
+          "name": "pages/basicInfo/basicInfo",
+          "pathName": "pages/studyProcess/studyProcess",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "pages/ceshi/ceshi",
           "pathName": "pages/ceshi/ceshi",
           "query": "",
@@ -19,13 +26,6 @@
         {
           "name": "pages/myProfile/myProfile",
           "pathName": "pages/myProfile/myProfile",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "pages/basicInfo/basicInfo",
-          "pathName": "pages/studyProcess/studyProcess",
           "query": "",
           "launchMode": "default",
           "scene": null
