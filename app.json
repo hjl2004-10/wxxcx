@@ -5,7 +5,8 @@
     "pages/studyDetail/studyDetail",
     "pages/share/share",
     "pages/myProfile/myProfile",
-    "pages/ceshi/ceshi"
+    "pages/ceshi/ceshi",
+    "pages/help/help"
   ],
   "window": {
     "navigationBarTextStyle": "black",
