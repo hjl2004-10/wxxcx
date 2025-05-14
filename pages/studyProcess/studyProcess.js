@@ -53,6 +53,8 @@ Page({
     // 图片生成相关
     storyImageUrl: '', // 故事相关图片URL
     isLoadingImage: false, // 是否正在加载图片
+    playIconPath: "/images/1.png", // 直接设置喇叭图标路径
+    pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
   },
   
   onLoad: function (options) {
@@ -62,13 +64,17 @@ Page({
       this.setData({
         currentStep: step,
         showBackIcon: step !== 1, // 只有研学前不显示返回按钮
-        fromOtherStep: false // 标记是否从其他步骤返回
+        fromOtherStep: false, // 标记是否从其他步骤返回
+        playIconPath: "/images/1.png", // 直接设置喇叭图标路径
+        pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
       });
       this.updatePageTitle();
     } else {
       // 初始状态
       this.setData({
-        fromOtherStep: false // 初始加载不是从其他步骤返回
+        fromOtherStep: false, // 初始加载不是从其他步骤返回
+        playIconPath: "/images/1.png", // 直接设置喇叭图标路径
+        pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
       });
     }
     
@@ -661,24 +667,11 @@ Page({
     
     // 构建简明提示文本
     const promptText = 
-`你是一位经验丰富的研学导师，请为以下研学活动创作一篇导读材料。
-研学场所类型: ${that.data.venueType}
+`研学场所类型: ${that.data.venueType}
 具体场所: ${that.data.specificVenue}
 参与者: ${kidsInfo}
-研学建议: ${selectedSuggestions}
-
-请创作一篇有教育意义的导读材料，向家长介绍如何指导孩子进行这次研学活动。内容包括:
-1. 简要介绍研学场所的特点和教育价值
-2. 针对该场所的研学要点和注意事项
-3. 如何引导孩子观察和思考
-4. 提供2-3个互动问题，帮助家长引导孩子
-5. 总结这次研学可能获得的收获
-
-格式要求：
-- 分段清晰，每段都有明确的序号
-- 使用简单直接的语言
-- 内容约800-1000字
-- 可使用"**加粗内容**"标记重点内容`;
+用户选择的研学建议: ${selectedSuggestions}
+`;
     
     console.log('开始生成研学指导故事，请求内容:', promptText);
     
@@ -850,6 +843,9 @@ Page({
   
   // 辅助方法：将故事文本转换为 rich-text 节点，支持序号加粗和换行
   parseStoryText: function(text) {
+    // 首先移除所有的"---"分隔线
+    text = text.replace(/^---+$/gm, '');
+    
     const lines = text.split('\n').filter(l => l.trim());
     return lines.map(line => {
       // 处理序号加粗
@@ -1038,9 +1034,50 @@ Page({
     
     this.saveCurrentStepData();
     
-    wx.navigateTo({
-      url: '/pages/share/share'
-    });
+    // 准备要保存的研学成果数据
+    const newStudyResult = {
+      id: Date.now().toString(), // 使用时间戳作为唯一ID
+      title: this.data.planTitle || '研学成果',
+      date: new Date().toLocaleDateString(),
+      imagePath: this.data.tempFilePaths.length > 0 ? this.data.tempFilePaths[0] : '',
+      reflection: this.data.reflectionText || '无心得体会'
+    };
+    
+    try {
+      // 从本地存储中读取现有研学成果
+      const studyResultsStorage = wx.getStorageSync('study_results');
+      let studyResults = [];
+      
+      if (studyResultsStorage) {
+        studyResults = JSON.parse(studyResultsStorage);
+      }
+      
+      // 添加新的研学成果
+      studyResults.push(newStudyResult);
+      
+      // 更新本地存储
+      wx.setStorageSync('study_results', JSON.stringify(studyResults));
+      
+      wx.showToast({
+        title: '保存成功',
+        icon: 'success',
+        duration: 2000,
+        success: function() {
+          // 保存成功后跳转到研学空间页面
+          setTimeout(function() {
+            wx.navigateTo({
+              url: '/pages/share/share'
+            });
+          }, 2000);
+        }
+      });
+    } catch (error) {
+      console.error('保存研学成果失败：', error);
+      wx.showToast({
+        title: '保存失败',
+        icon: 'none'
+      });
+    }
   },
   
   viewDetails: function() {
@@ -1975,24 +2012,17 @@ Page({
   
   // 创建音频播放和暂停图标
   createAudioIcons: function() {
-    const playIconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAArNJREFUaEPtmj1rFUEUhp+rUdBCjQZTKMFK0U4UNAYRRLQxKFiIjR8/QP0HNhYGbAIWgp2VnQgWRkUbaywULUXBzkIUFUVFfA/szGXv7Ozs3jRz71wzs3PmnWfOnJmZXaHlQ1rOTw2g7gzWGRhoBhasA8a2kJmtAyvAW0lf+s0vKwNm9h44CrySdDYHQC6Ay8Bd4LmkM9UgzewGcL/YX9KxZF9JXdvXHVTSwcx+A5uAG5KehP0bwIqk3TkAojYzs3XAPUmHyxuY2TBwzsyGJP0ws9vAHeBE05IIPEcl9QSQNB4BXQLOAP+AFZKmcgCU2vwBYKFY6IakR2Z2FngCHJa0lAsgAJ8GBoG3kg4WbcaBh8BhSR9zAsQs/AXGgAgqyJAVIDDxBTgF7AVmJY0UzE+AC8CkpLleHFvpU1YGzOwbsB3YJOlP0f5TcbL0I6HcAMGlfjc6ApSrUx0AvdJoZltKZfSzbwkts1RViOKi1RWgdR2wnoCZeVsQ/Z5YXB0+SorqSzILlb58SdLdsu2cfcw25ujzB2BUUT82NiwD84XI46PWLL9lAWGbeK2/A14v+JLdF48q8Ox99kq64mUgEDMrKSklyzM7uy8yNb3c3OAWitTUAUBLMuAlNK5E/wEaGUgF2Mi+0StdvGCDHzPS2lYGCE6lQzBtGiApiaQMND4DPuPW+gxUr0KNz0D1KtTE6/TqdHpMOm68Z/FxK/JZRZu2UKP6QM5nItE2aQvlrEINfCYSbau2UFINbnoVShJvawaSxPs20rQqVCXe1gwkibctAz2Jty0D3YgHW0mfswAEYnJ34t4O+Hs5dAJYkHQoC0AuoNRveQDO+wPGYGr1OYHU/SnHVwPodDJaBnrl/4qvhvbfbBteQlMBmpoP7/haC2X8Fy/wDzc/3jGwc6t0AAAAAElFTkSuQmCC";
+    // 直接使用喇叭图标和暂停图标文件路径
+    const playIconPath = "/images/1.png";
+    const pauseIconPath = "/images/2.png";
     
-    const pauseIconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAAJlJREFUaEPtlkEKwCAMBOO/+rJ+wByK0lKDNLCdW93NjNl1LH6Oxfrpgd0O2sAuoPzfBpQDLXOqNMpz8mDD+SSP1jIazCNSEwnoAdYErCZEizWBow0oE/ixu+OU+aZJWuOXCZ0AegKi/BIBnQJRgVaEVAfEsfoScwGUETVQRtRAGVEDZUQNlBE1UEbUQBlRA2VEDZQRf2PgAq3zUSEJYwhvAAAAAElFTkSuQmCC";
+    // 设置到全局数据和页面数据
+    wx.setStorageSync('play_icon_path', playIconPath);
+    wx.setStorageSync('pause_icon_path', pauseIconPath);
     
-    // 生成播放图标
-    this.base64ToImage(playIconBase64, (playIconPath) => {
-      // 生成暂停图标
-      this.base64ToImage(pauseIconBase64, (pauseIconPath) => {
-        // 设置到全局数据
-        wx.setStorageSync('play_icon_path', playIconPath);
-        wx.setStorageSync('pause_icon_path', pauseIconPath);
-        
-        // 设置到数据中
-        this.setData({
-          playIconPath: playIconPath,
-          pauseIconPath: pauseIconPath
-        });
-      });
+    this.setData({
+      playIconPath: playIconPath,
+      pauseIconPath: pauseIconPath
     });
   },
   

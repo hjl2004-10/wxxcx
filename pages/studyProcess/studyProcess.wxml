@@ -224,31 +224,30 @@
           <!-- 语音播放按钮 -->
           <view class="audio-btn-story" catchtap="togglePlayAudio" data-id="guide_story" data-text="{{guideStory}}">
             <image src="{{isPlayingAudio && currentPlayingId === 'guide_story' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
-            <text class="audio-text">{{isPlayingAudio && currentPlayingId === 'guide_story' ? '暂停播放' : '语音播报'}}</text>
           </view>
         </view>
         <view class="story-content">
           <rich-text nodes="{{guideStoryNodes}}" wx:if="{{guideStoryNodes}}" />
           <view wx:else>{{guideStory || '暂无导读材料，请先在"分析建议"中选择建议并生成'}}</view>
-        </view>
-        
-        <!-- 添加故事插图部分 -->
-        <view class="story-image-container" wx:if="{{storyImageUrl || isLoadingImage}}">
-          <view class="story-image-title">故事插图</view>
-          <!-- 加载中显示 -->
-          <view class="image-loading" wx:if="{{isLoadingImage && !storyImageUrl}}">
-            <view class="spinner"></view>
-            <text>正在生成故事插图，可能需要较长时间...</text>
-            <text class="loading-tips">请耐心等待，图片生成大约需要1-2分钟</text>
+          
+          <!-- 故事插图移到内容区域底部 -->
+          <view class="story-image-container" wx:if="{{storyImageUrl || isLoadingImage}}">
+            <view class="story-image-title">故事插图</view>
+            <!-- 加载中显示 -->
+            <view class="image-loading" wx:if="{{isLoadingImage && !storyImageUrl}}">
+              <view class="spinner"></view>
+              <text>正在生成故事插图，可能需要较长时间...</text>
+              <text class="loading-tips">请耐心等待，图片生成大约需要1-2分钟</text>
+            </view>
+            <!-- 图片显示 -->
+            <image 
+              wx:if="{{storyImageUrl}}" 
+              src="{{storyImageUrl}}" 
+              mode="widthFix" 
+              class="story-image"
+              binderror="handleImageError"
+              bindload="handleImageLoaded"></image>
           </view>
-          <!-- 图片显示 -->
-          <image 
-            wx:if="{{storyImageUrl}}" 
-            src="{{storyImageUrl}}" 
-            mode="widthFix" 
-            class="story-image"
-            binderror="handleImageError"
-            bindload="handleImageLoaded"></image>
         </view>
       </view>
       
@@ -318,6 +317,6 @@
       </view>
     </view>
     
-    <view class="primary-btn" bindtap="shareResults">分享研学成果</view>
+    <view class="primary-btn" bindtap="shareResults">保存到空间</view>
   </view>
 </view>

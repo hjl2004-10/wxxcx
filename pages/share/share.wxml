@@ -1,55 +1,35 @@
 <!--pages/share/share.wxml-->
 <view class="container">
-  <view class="nav-bar">
-    <view class="back-icon" bindtap="goBack">〈</view>
-    <text class="title">分享</text>
+  <view class="empty-state" wx:if="{{studyResults.length === 0}}">
+    <image class="empty-icon" src="/images/book_icon.png" mode="aspectFit"></image>
+    <text class="empty-text">暂无研学成果</text>
+    <text class="empty-tips">完成研学活动后可在此查看您的研学成果</text>
   </view>
   
-  <view class="flow-steps">
-    <view class="flow-step" bindtap="goToStudyBefore">
-      <view class="step-circle">1</view>
-      <text class="step-text">研学前</text>
-    </view>
-    <view class="step-line"></view>
-    <view class="flow-step" bindtap="goToStudyDuring">
-      <view class="step-circle">2</view>
-      <text class="step-text">研学中</text>
-    </view>
-    <view class="step-line"></view>
-    <view class="flow-step active">
-      <view class="step-circle">3</view>
-      <text class="step-text">研学后</text>
-    </view>
-  </view>
-  
-  <view class="share-section">
-    <view class="share-card">
-      <view class="share-header">
-        <image class="user-avatar" src="/images/avatar.png"></image>
-        <view class="user-info">
-          <text class="username">{{username}}</text>
-          <text class="share-time">{{shareTime}}</text>
+  <view class="study-list" wx:else>
+    <block wx:for="{{studyResults}}" wx:key="id">
+      <view class="study-item">
+        <view class="study-header">
+          <text class="study-title">{{item.title}}</text>
+          <text class="study-date">{{item.date}}</text>
+        </view>
+        
+        <view class="study-content">
+          <image wx:if="{{item.imagePath}}" src="{{item.imagePath}}" mode="aspectFill" class="study-image"></image>
+          <text class="study-text">{{item.reflection}}</text>
+        </view>
+        
+        <view class="study-footer">
+          <view class="footer-btn" bindtap="shareToFriends" data-id="{{item.id}}">
+            <image class="btn-icon" src="/images/share_icon.png" mode="aspectFit"></image>
+            <text>分享</text>
+          </view>
+          <view class="footer-btn" bindtap="deleteStudy" data-id="{{item.id}}">
+            <image class="btn-icon" src="/images/upload_icon.png" mode="aspectFit"></image>
+            <text>删除</text>
+          </view>
         </view>
       </view>
-      
-      <view class="share-content">
-        <text class="share-text">{{shareText}}</text>
-        <view class="share-images">
-          <image wx:for="{{shareImages}}" wx:key="index" src="{{item}}" mode="aspectFill" class="share-image"></image>
-        </view>
-      </view>
-      
-      <view class="share-footer">
-        <view class="action-button" bindtap="likePost">
-          <image src="/images/like_icon.png" class="action-icon"></image>
-          <text>{{likeCount}}</text>
-        </view>
-        <view class="action-button" bindtap="commentPost">
-          <image src="/images/comment_icon.png" class="action-icon"></image>
-          <text>{{commentCount}}</text>
-        </view>
-        <button class="share-button" open-type="share">分享给朋友</button>
-      </view>
-    </view>
+    </block>
   </view>
 </view>

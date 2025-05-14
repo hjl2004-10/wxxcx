@@ -2,7 +2,7 @@ from flask import Flask, request, Response, stream_with_context, jsonify
 import requests
 import json
 import os
-import time\nimport re
+import time
 
 app = Flask(__name__)
 
@@ -45,7 +45,7 @@ SPEECH_SERVICES = {
         "url": "https://api.siliconflow.cn/v1/audio/speech",
         "api_key": "sk-rkzuttktbfjvjabtrtxmgszuejimomhcemndpmdiyxmyatjl",  # 请替换为实际的硅基云API密钥
         "model": "FunAudioLLM/CosyVoice2-0.5B",
-        "voice": "FunAudioLLM/CosyVoice2-0.5B:alex",
+        "voice": "FunAudioLLM/CosyVoice2-0.5B:anna",
         "response_format": "mp3",
         "sample_rate": 32000,
         "stream": True,
@@ -75,15 +75,15 @@ def get_system_prompt(service_id):
                 return f.read()
     except Exception as e:
         print(f"读取预设文件出错: {e}")
-    return "你是一个AI助手�?
+    return "你是一个AI助手。"
 
 @app.route('/<service_id>', methods=['POST'])
 def proxy_request(service_id):
     if service_id not in AI_SERVICES:
-        return {"error": "服务不存�?}, 404
+        return {"error": "服务不存在"}, 404
 
     service_config = AI_SERVICES[service_id]
-    # 获取客户端访问密�?
+    # 获取客户端访问密钥
     client_key = request.headers.get('X-Access-Key', '')
     client_data = {}
     try:
@@ -98,10 +98,10 @@ def proxy_request(service_id):
 
     user_text = client_data.get('text', '')
     if not user_text:
-        return {"error": "未提供文本内�?}, 400
+        return {"error": "未提供文本内容"}, 400
 
     # 判断是否流式输出 - 增加检查请求头中的X-Stream参数
-    stream = True  # 默认�?
+    stream = True  # 默认流
     if 'stream' in client_data:
         stream = bool(client_data['stream'])
     elif 'stream' in request.args:
@@ -111,7 +111,7 @@ def proxy_request(service_id):
     if request.headers.get('X-Stream'):
         stream = request.headers.get('X-Stream').lower() == 'true'
     
-    # 添加一些调试输�?
+    # 添加一些调试输出
     print(f"请求参数: service_id={service_id}, stream={stream}")
     print(f"请求头X-Stream: {request.headers.get('X-Stream')}")
     print(f"请求数据stream: {client_data.get('stream')}")
@@ -155,7 +155,7 @@ def proxy_request(service_id):
         return Response(stream_with_context(generate()), content_type='text/event-stream')
 
     else:
-        # 非流式，返回完整JSON（抽取用户常用的content�?
+        # 非流式，返回完整JSON（抽取用户常用的content）
         resp = requests.post(
             service_config['url'],
             headers=headers,
@@ -169,7 +169,7 @@ def proxy_request(service_id):
         except Exception as e:
             return jsonify({"error": "响应内容不是json", "raw": resp.text})
 
-        # 尝试从choices里提取内�?
+        # 尝试从choices里提取内容
         content = ""
         if data and 'choices' in data and len(data['choices']) > 0:
             choice = data['choices'][0]
@@ -217,46 +217,68 @@ def process_stream_chunk(chunk):
 
 # 增强和美化内容的函数
 def enhance_content(content):
-    """添加一些修饰和格式�?""
+    """添加一些修饰和格式化"""
     # 这里可以添加各种增强逻辑，如:
     # - 添加表情符号
-    # - 格式化文�?
+    # - 格式化文本
     # - 高亮关键内容
     # - 添加分隔符或标记
     
-    # 示例: 简单地添加一些修�?
+    # 示例: 简单地添加一些修饰
     enhanced = content
     
-    # 尝试识别标题并添加格�?
+    # 尝试识别标题并添加格式
     lines = enhanced.split('\n')
     for i, line in enumerate(lines):
         # 处理标题
         if line.startswith('#'):
-            # 标题加粗并增加表情符�?
+            # 标题加粗并增加表情符号
             title_level = line.count('#')
             if title_level == 1:
                 lines[i] = "🌟 " + line.replace('# ', '')
             elif title_level == 2:
-                lines[i] = "�?" + line.replace('## ', '')
+                lines[i] = "✨ " + line.replace('## ', '')
             elif title_level == 3:
                 lines[i] = "🔍 " + line.replace('### ', '')
         
-        # 处理列表�?
+        # 处理无序列表项 - 支持多种无序列表标记
         if line.strip().startswith('- '):
-            lines[i] = "�?" + line.strip()[2:]
+            lines[i] = "• " + line.strip()[2:]
         elif line.strip().startswith('* '):
-            lines[i] = "�?" + line.strip()[2:]
+            lines[i] = "✦ " + line.strip()[2:]
+        elif line.strip().startswith('+ '):
+            lines[i] = "✧ " + line.strip()[2:]
         
-        # 数字列表项处�?
-        if line.strip().startswith('1.') or line.strip().startswith('2.') or line.strip().startswith('3.'):
-            number = line.strip().split('.')[0]
-            rest = '.'.join(line.strip().split('.')[1:])
-            if number == '1':
-                lines[i] = "1️⃣ " + rest.strip()
-            elif number == '2':
-                lines[i] = "2️⃣ " + rest.strip()
-            elif number == '3':
-                lines[i] = "3️⃣ " + rest.strip()
+        # 数字列表项处理 - 扩展到更多数字
+        if line.strip() and line.strip()[0].isdigit() and '. ' in line.strip():
+            parts = line.strip().split('. ', 1)
+            if len(parts) == 2 and parts[0].isdigit():
+                number = int(parts[0])
+                text = parts[1]
+                
+                if number == 1:
+                    lines[i] = "1️⃣ " + text
+                elif number == 2:
+                    lines[i] = "2️⃣ " + text
+                elif number == 3:
+                    lines[i] = "3️⃣ " + text
+                elif number == 4:
+                    lines[i] = "4️⃣ " + text
+                elif number == 5:
+                    lines[i] = "5️⃣ " + text
+                elif number == 6:
+                    lines[i] = "6️⃣ " + text
+                elif number == 7:
+                    lines[i] = "7️⃣ " + text
+                elif number == 8:
+                    lines[i] = "8️⃣ " + text
+                elif number == 9:
+                    lines[i] = "9️⃣ " + text
+                elif number == 10:
+                    lines[i] = "🔟 " + text
+                else:
+                    # 对于大于10的数字，使用普通数字加修饰
+                    lines[i] = f"🔸 {number}. " + text
 
     # 重新拼接处理后的文本
     enhanced = '\n'.join(lines)
@@ -266,18 +288,21 @@ def enhance_content(content):
         "重要": "⚠️ 重要",
         "注意": "📝 注意",
         "提示": "💡 提示",
-        "技�?: "🔧 技�?,
+        "技巧": "🔧 技巧",
         "建议": "🌈 建议",
         "活动": "🎮 活动",
         "学习": "📚 学习",
         "目标": "🎯 目标",
-        "任务": "�?任务"
+        "任务": "✅ 任务",
+        "步骤": "📋 步骤",
+        "指南": "📔 指南",
+        "流程": "🔄 流程"
     }
     
     for word, replacement in replacements.items():
         # 只替换行首的关键词，避免过度替换
         enhanced = enhanced.replace("\n" + word, "\n" + replacement)
-        # 替换开头的关键�?
+        # 替换开头的关键词
         if enhanced.startswith(word):
             enhanced = replacement + enhanced[len(word):]
     
@@ -287,10 +312,10 @@ def enhance_content(content):
 @app.route('/spk/<service_id>', methods=['POST'])
 def text_to_speech(service_id):
     if service_id not in SPEECH_SERVICES:
-        return {"error": "语音服务不存�?}, 404
+        return {"error": "语音服务不存在"}, 404
 
     service_config = SPEECH_SERVICES[service_id]
-    # 获取客户端访问密�?
+    # 获取客户端访问密钥
     client_key = request.headers.get('X-Access-Key', '')
     client_data = {}
     try:
@@ -303,12 +328,12 @@ def text_to_speech(service_id):
     if client_key != service_config['access_key']:
         return {"error": "访问密钥无效"}, 401
 
-    # 获取要转换为语音的文�?
+    # 获取要转换为语音的文本
     text = client_data.get('text', '')
     if not text:
-        return {"error": "未提供文本内�?}, 400
+        return {"error": "未提供文本内容"}, 400
     
-    # 可选参�?
+    # 可选参数
     voice = client_data.get('voice', service_config['voice'])
     speed = client_data.get('speed', service_config['speed'])
     
@@ -324,7 +349,7 @@ def text_to_speech(service_id):
         "gain": service_config['gain']
     }
     
-    # 添加一些调试输�?
+    # 添加一些调试输出
     print(f"语音请求参数: service_id={service_id}, voice={voice}, text_length={len(text)}")
     
     headers = {
@@ -353,10 +378,10 @@ def text_to_speech(service_id):
 @app.route('/pic/<service_id>', methods=['POST'])
 def generate_image(service_id):
     if service_id not in IMAGE_SERVICES:
-        return {"error": "图像服务不存�?}, 404
+        return {"error": "图像服务不存在"}, 404
 
     service_config = IMAGE_SERVICES[service_id]
-    # 获取客户端访问密�?
+    # 获取客户端访问密钥
     client_key = request.headers.get('X-Access-Key', '')
     client_data = {}
     try:
@@ -372,9 +397,9 @@ def generate_image(service_id):
     # 获取图像生成提示文本
     prompt = client_data.get('text', '')
     if not prompt:
-        return {"error": "未提供提示文�?}, 400
+        return {"error": "未提供提示文本"}, 400
     
-    # 限制提示文本长度以避免错�?
+    # 限制提示文本长度以避免错误
     if len(prompt) > 150:
         print(f"提示文本过长({len(prompt)}字符)，截断到150字符")
         prompt = prompt[:150]
@@ -382,10 +407,10 @@ def generate_image(service_id):
     # 添加调试输出
     print(f"图像生成请求参数: service_id={service_id}, prompt_length={len(prompt)}")
     print(f"开始生成图片，请求时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"提示词内�? {prompt}")
+    print(f"提示词内容: {prompt}")
     
-    # 构建请求参数 - 使用与其他AI服务完全相同的格�?
-    system_prompt = "你是一个图像生成AI。你将收到一个图像描述，你需要生成该图像并返回图像的URL链接。只返回图像URL，不要有其他内容�?
+    # 构建请求参数 - 使用与其他AI服务完全相同的格式
+    system_prompt = "你是一个图像生成AI。你将收到一个图像描述，你需要生成该图像并返回图像的URL链接。只返回图像URL，不要有其他内容。"
     
     ai_request = {
         "model": service_config['model'],
@@ -394,7 +419,7 @@ def generate_image(service_id):
         "stream": True,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"生成这张图片: {prompt}. 只返回图片URL，无需其他内容�?}
+            {"role": "user", "content": f"生成这张图片: {prompt}. 只返回图片URL，无需其他内容。"}
         ]
     }
     
@@ -403,7 +428,7 @@ def generate_image(service_id):
         'Authorization': f'Bearer {service_config["api_key"]}'
     }
     
-    # 发送流式请�?
+    # 发送流式请求
     try:
         response = requests.post(
             service_config['url'],
@@ -442,7 +467,7 @@ def generate_image(service_id):
                             content = delta['content']
                             full_content += content
                 except Exception as e:
-                    print(f"处理块数据错�? {e}, �? {chunk}")
+                    print(f"处理块数据错误: {e}, 块: {chunk}")
         
         print(f"完整响应内容: {full_content}")
         
@@ -459,13 +484,13 @@ def generate_image(service_id):
             
     except Exception as e:
         print(f"图像生成异常: {str(e)}, 时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        return jsonify({"error": f"请求图像生成服务时发生错�? {str(e)}"}), 500
+        return jsonify({"error": f"请求图像生成服务时发生错误: {str(e)}"}), 500
 
-# 其它管理函数同你的原始代�?..
+# 其它管理函数同你的原始代码...
 
 if __name__ == '__main__':
     print(f"当前工作目录: {os.getcwd()}")
-    print(f"脚本所在目�? {SCRIPT_DIR}")
+    print(f"脚本所在目录: {SCRIPT_DIR}")
 
     host = os.environ.get('HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', 5000))
@@ -476,23 +501,23 @@ if __name__ == '__main__':
         prompt_file = os.path.join(SCRIPT_DIR, f"{id}.txt")
         if os.path.exists(prompt_file):
             size = os.path.getsize(prompt_file)
-            print(f"  预设文件: {id}.txt (已存�? 大小: {size} 字节)")
+            print(f"  预设文件: {id}.txt (已存在, 大小: {size} 字节)")
             print(f"  完整路径: {prompt_file}")
             try:
                 with open(prompt_file, 'r', encoding='utf-8') as f:
                     preview = f.read(100)
                     print(f"  内容预览: {preview[:50]}{'...' if len(preview) > 50 else ''}")
             except Exception as e:
-                print(f"  读取预览时出�? {e}")
+                print(f"  读取预览时出错: {e}")
         else:
             print(f"  预设文件: {id}.txt (缺失)")
             print(f"  完整路径: {prompt_file}")
 
-    print("\n可用的语音服�?")
+    print("\n可用的语音服务:")
     for id, service in SPEECH_SERVICES.items():
         print(f"ID: {id}, 名称: {service['name']}, 模型: {service['model']}")
 
-    print("\n可用的图像服�?")
+    print("\n可用的图像服务:")
     for id, service in IMAGE_SERVICES.items():
         print(f"ID: {id}, 名称: {service['name']}, 模型: {service['model']}")
 

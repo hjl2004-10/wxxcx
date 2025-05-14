@@ -26,7 +26,14 @@ Page({
   viewStudyPlan: function(e) {
     const id = e.currentTarget.dataset.id;
     wx.navigateTo({
-      url: '/pages/studyPlan/studyPlan?id=' + id
+      url: '/pages/studyDetail/studyDetail?id=' + id
+    });
+  },
+  
+  // 跳转到研学空间
+  goToStudySpace: function() {
+    wx.navigateTo({
+      url: '/pages/share/share'
     });
   }
 }); 
