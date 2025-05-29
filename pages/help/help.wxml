@@ -1,9 +1,5 @@
 <!--pages/help/help.wxml-->
 <view class="container">
-  <view class="header">
-    <view class="title">帮助与反馈</view>
-  </view>
-  
   <view class="help-content">
     <!-- 常见问题列表 -->
     <view class="help-list">

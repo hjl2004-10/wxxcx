@@ -2,13 +2,39 @@ var app = getApp();
 
 Page({
   data: {
-    currentStep: 1,  // 1-研学前, 2-研学中, 3-研学后
-    subStep: 'info', // info-基本信息, suggestions-建议, suggestionDetail-建议详情, guideStory-指导故事
-    showSuggestionsTab: false, // 是否显示分析建议选项卡
+    currentStep: 1,
     showBackIcon: false,
     pageTitle: "亲子研学流程",
-    stepsEnabled: false, // 控制研学中和研学后步骤是否可用
-    selectedSuggestions: [], // 已选择的分析建议
+    stepsEnabled: false,
+    selectedSuggestions: [],
+    
+    // 新增：对话相关数据
+    chatMessages: [],
+    inputText: '',
+    isLoadingSuggestions: false,
+    showDetailModal: false,
+    
+    // 新增：AI4接口相关配置
+    serviceId: '6', // AI4接口ID
+    accessKey: 'hjl2004', // 访问密钥
+    serverUrl: 'https://tanlv.top', // 服务器URL
+    isAIResponding: false, // AI是否正在回复
+    
+    // 新增：强制开始相关
+    showForceStartBtn: false, // 是否显示强制开始按钮
+    conversationCount: 0, // 对话轮次计数
+    
+    // 新增：并发生成状态
+    showGenerationArea: false,
+    guideStoryStatus: 'waiting',
+    studyPlanStatus: 'waiting',
+    guideStoryStatusText: '等待开始',
+    studyPlanStatusText: '等待开始',
+    
+    // 新增：插图相关状态
+    storyImageUrl: '',
+    isGeneratingImage: false,
+    imageError: '',
     
     // 基本信息相关数据
     kidsInfo: [{
@@ -20,13 +46,14 @@ Page({
     specificVenue: '',
     duration: '2h',
     
-    // 研学前分析建议相关数据
-    suggestions: [], // 分析建议列表
-    currentSuggestion: null, // 当前查看的分析建议详情
+    // 分析建议相关数据
+    suggestions: [],
+    currentSuggestion: null,
     
     // 研学中计划相关数据
     planTitle: '',
     steps: [],
+    studyCards: [],
     
     // 研学后相关数据
     tempFilePaths: [],
@@ -34,555 +61,897 @@ Page({
     
     // API相关
     conversationId: '',
-    
-    // 添加新属性
-    specificVenueOptions: ['北京故宫', '上海科技馆', '长城', '黄山'], // 默认值
-    guideStory: '', // 预研学指导故事
-    studyTasks: [], // 研学阶段的详细任务
-    studyCards: [], // 研学卡片
-    planGenerated: false, // 标记研学计划是否已生成
-    showCustomVenueInput: false,
-    customVenue: '',
+    guideStory: '',
+    guideStoryNodes: '',
 
     // 语音播放相关
-    isPlayingAudio: false, // 是否正在播放语音
-    audioContext: null, // 音频上下文
-    currentPlayingId: '', // 当前播放的文本ID
-    playingText: '', // 当前播放的文本内容
-
-    // 图片生成相关
-    storyImageUrl: '', // 故事相关图片URL
-    isLoadingImage: false, // 是否正在加载图片
-    playIconPath: "/images/1.png", // 直接设置喇叭图标路径
-    pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
+    isPlayingAudio: false,
+    audioContext: null,
+    currentPlayingId: '',
+    playingText: '',
+    playIconPath: "/images/1.png",
+    pauseIconPath: "/images/2.png",
+    
+    // 新增：兴趣分类相关数据
+    interestCategories: [
+      {
+        id: 'nature',
+        name: '自然风光',
+        icon: '🌿',
+        subcategories: [
+          { id: 'plants', name: '植物生态', description: '了解各种植物、生态系统' },
+          { id: 'animals', name: '动物世界', description: '观察动物习性、生活环境' },
+          { id: 'geology', name: '地质地貌', description: '学习地质结构、自然景观形成' },
+          { id: 'weather', name: '气象天文', description: '认识天气现象、天体运行' },
+          { id: 'environment', name: '环境保护', description: '培养环保意识、生态保护' }
+        ]
+      },
+      {
+        id: 'technology',
+        name: '科技创新',
+        icon: '🔬',
+        subcategories: [
+          { id: 'physics', name: '物理原理', description: '体验物理现象、科学实验' },
+          { id: 'engineering', name: '工程技术', description: '了解机械结构、工程设计' },
+          { id: 'digital', name: '数字科技', description: '接触编程、人工智能、虚拟现实' },
+          { id: 'medicine', name: '生命科学', description: '学习人体结构、医学知识' },
+          { id: 'space', name: '航空航天', description: '探索太空科技、航天器原理' }
+        ]
+      },
+      {
+        id: 'history',
+        name: '历史文化',
+        icon: '🏛️',
+        subcategories: [
+          { id: 'architecture', name: '古建筑艺术', description: '欣赏古代建筑、建造工艺' },
+          { id: 'costume', name: '服饰文化', description: '了解传统服装、时代特色' },
+          { id: 'customs', name: '民俗习惯', description: '体验传统习俗、节庆文化' },
+          { id: 'literature', name: '文学艺术', description: '接触古典文学、书法绘画' },
+          { id: 'philosophy', name: '思想文化', description: '学习传统思想、哲学理念' }
+        ]
+      },
+      {
+        id: 'art',
+        name: '艺术创作',
+        icon: '🎨',
+        subcategories: [
+          { id: 'painting', name: '绘画艺术', description: '学习绘画技巧、艺术欣赏' },
+          { id: 'music', name: '音乐表演', description: '了解音乐理论、乐器演奏' },
+          { id: 'handicraft', name: '手工制作', description: '动手制作、创意设计' },
+          { id: 'drama', name: '戏剧表演', description: '体验角色扮演、舞台表演' },
+          { id: 'photography', name: '摄影艺术', description: '学习摄影技巧、美学构图' }
+        ]
+      }
+    ],
+    selectedInterestCategories: [], // 用户选择的大类
+    selectedSubcategories: [], // 用户选择的细分类别
+    showInterestSelection: false, // 是否显示兴趣选择界面
+    currentInterestStep: 'category', // 当前步骤：category(大类选择) / subcategory(细分选择) / complete(完成)
+    
+    // 新增：信息收集阶段标识
+    collectionPhase: 'basic', // basic(基本信息) / interest(兴趣选择) / complete(完成)
   },
   
   onLoad: function (options) {
-    // 如果有传入参数指定步骤
     if (options.step) {
       const step = parseInt(options.step);
       this.setData({
         currentStep: step,
-        showBackIcon: step !== 1, // 只有研学前不显示返回按钮
-        fromOtherStep: false, // 标记是否从其他步骤返回
-        playIconPath: "/images/1.png", // 直接设置喇叭图标路径
-        pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
+        showBackIcon: step !== 1
       });
       this.updatePageTitle();
-    } else {
-      // 初始状态
-      this.setData({
-        fromOtherStep: false, // 初始加载不是从其他步骤返回
-        playIconPath: "/images/1.png", // 直接设置喇叭图标路径
-        pauseIconPath: "/images/2.png" // 直接设置暂停图标路径
-      });
     }
     
-    // 加载缓存数据
     this.loadCachedData();
-    
-    // 创建播放和暂停图标
     this.createAudioIcons();
+    this.initChat();
   },
   
-  // 更新页面标题
-  updatePageTitle: function() {
-    let title = "";
-    switch(this.data.currentStep) {
-      case 1:
-        if (this.data.subStep === 'info') {
-          title = "研学前 - 基本信息";
-        } else if (this.data.subStep === 'suggestions') {
-          title = "研学前 - 分析建议";
-        } else if (this.data.subStep === 'suggestionDetail') {
-          title = "研学前 - 建议详情";
-        } else if (this.data.subStep === 'guideStory') {
-          title = "研学前 - 导读材料";
-        }
-        break;
-      case 2:
-        title = "研学中";
-        break;
-      case 3:
-        title = "研学后";
-        break;
+  // 新增：页面卸载时清理资源
+  onUnload: function() {
+    // 停止音频播放
+    if (this.data.audioContext) {
+      this.data.audioContext.destroy();
     }
+  },
+  
+  // 新增：初始化对话
+  initChat: function() {
+    const welcomeMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: '您好！我是您的研学规划助手🤖\n\n为了给您制定最合适的研学方案，我需要了解一些基本信息：\n\n1. 参与研学的孩子情况（年龄、性别）\n2. 您想去的研学场所\n3. 计划的研学时长\n\n请告诉我一些孩子的基本情况吧！'
+    };
+    
     this.setData({
-      pageTitle: title
+      chatMessages: [welcomeMessage]
     });
   },
   
-  // 切换主步骤
-  switchToStep: function(e) {
-    const step = parseInt(e.currentTarget.dataset.step);
-    const currentStep = this.data.currentStep;
-    
-    // 避免重复点击当前步骤
-    if (step === currentStep) {
-      return;
-    }
-    
-    // 检查是否允许切换到研学中或研学后
-    if ((step === 2 || step === 3) && !this.data.stepsEnabled) {
-      wx.showToast({
-        title: '请先选择研学分析建议',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    // 如果是切换到研学中，但计划还未生成，需要先生成计划
-    if (step === 2 && !this.data.planGenerated) {
-      wx.showToast({
-        title: '请先生成研学计划',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    // 保存当前步骤的数据
-    this.saveCurrentStepData();
-    
-    // 保存导航栏高度状态
-    const showBackBeforeSwitch = this.data.showBackIcon;
-    
-    // 设置新状态
+  // 新增：处理聊天输入
+  onChatInput: function(e) {
     this.setData({
-      currentStep: step,
-      showSuggestionsTab: step == 1 && this.data.suggestions.length > 0,
-      // 关键修改：保持一致的返回按钮状态
-      showBackIcon: step != 1 || showBackBeforeSwitch,
-      subStep: step == 1 ? (this.data.suggestions.length > 0 ? 'suggestions' : 'info') : ''
+      inputText: e.detail.value
     });
-    
-    this.updatePageTitle();
   },
   
-  // 切换子步骤
-  switchSubStep: function(e) {
-    const subStep = e.currentTarget.dataset.subStep;
-    // 如果切换到导读材料但尚未生成，提示用户
-    if (subStep === 'guideStory' && !this.data.guideStory && !this.data.guideStoryNodes) {
-      wx.showToast({
-        title: '请先生成导读材料',
-        icon: 'none'
-      });
-      return;
-    }
+  // 新增：发送消息
+  sendMessage: function() {
+    const inputText = this.data.inputText.trim();
+    if (!inputText || this.data.isAIResponding) return;
+    
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: inputText
+    };
+    
+    const newMessages = [...this.data.chatMessages, userMessage];
+    const newConversationCount = this.data.conversationCount + 1;
+    
     this.setData({
-      subStep: subStep
+      chatMessages: newMessages,
+      inputText: '',
+      isAIResponding: true,
+      currentAIResponse: '',
+      conversationCount: newConversationCount,
+      // 对话超过6轮且还没生成建议时才显示强制开始按钮
+      showForceStartBtn: newConversationCount >= 6 && !this.data.isLoadingSuggestions && this.data.suggestions.length === 0
     });
-    this.updatePageTitle();
+    
+    this.callAI4Interface(inputText);
   },
   
-  // 保存当前步骤数据
-  saveCurrentStepData: function() {
-    const data = this.data;
-    let cacheData = {};
+  // 新增：强制开始生成
+  forceStartGeneration: function() {
+    // 【关键修复】强制开始时也要提取对话信息
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
     
-    // 根据当前步骤保存不同数据
-    switch(data.currentStep) {
-      case 1:
-        if (data.subStep === 'info') {
-          cacheData = {
-            kidsInfo: data.kidsInfo,
-            venueType: data.venueType,
-            specificVenue: data.specificVenue,
-            duration: data.duration
-          };
-        } else if (data.subStep === 'suggestions' || data.subStep === 'suggestionDetail') {
-          cacheData = {
-            suggestions: data.suggestions,
-            selectedSuggestions: data.selectedSuggestions
-          };
-        } else if (data.subStep === 'guideStory') {
-          cacheData = {
-            guideStory: data.guideStory,
-            guideStoryNodes: data.guideStoryNodes
-          };
-          // 单独保存指导故事
-          try {
-            wx.setStorageSync('studyProcess_1_guideStory', cacheData);
-          } catch (e) {
-            console.error('保存指导故事数据失败:', e);
+    // 智能提取基本信息
+    const extractedInfo = this.extractInfoWithDefaults(conversationText);
+    
+    console.log('🔧 强制开始时提取的信息:', extractedInfo);
+    
+    // 设置基本信息到data中
+    this.setData({
+      kidsInfo: extractedInfo.kidsInfo,
+      venueType: extractedInfo.venueType,
+      specificVenue: extractedInfo.specificVenue,
+      duration: extractedInfo.duration
+    });
+    
+    // 检查当前所在阶段
+    if (this.data.collectionPhase === 'basic') {
+      // 基本信息阶段的强制开始
+      wx.showModal({
+        title: '确认开始',
+        content: `确定要基于当前信息进入兴趣选择阶段吗？\n\n当前信息：\n👶 ${extractedInfo.kidsInfo[0].age}岁${extractedInfo.kidsInfo[0].gender}孩\n📍 ${extractedInfo.specificVenue}\n⏰ ${extractedInfo.duration}\n\n缺失的信息将使用合理的默认值。`,
+        confirmText: '确定开始',
+        cancelText: '继续对话',
+        success: (res) => {
+          if (res.confirm) {
+            this.triggerInterestSelection();
           }
         }
-        break;
-      case 2:
-        cacheData = {
-          planTitle: data.planTitle,
-          steps: data.steps,
-          studyCards: data.studyCards // 确保保存研学卡片
-        };
-        break;
-      case 3:
-        cacheData = {
-          tempFilePaths: data.tempFilePaths,
-          reflectionText: data.reflectionText
-        };
-        break;
-    }
-    
-    // 保存到本地缓存
-    try {
-      wx.setStorageSync('studyProcess_' + data.currentStep + '_' + data.subStep, cacheData);
-    } catch (e) {
-      console.error('保存缓存数据失败:', e);
-    }
-  },
-  
-  // 加载缓存数据
-  loadCachedData: function() {
-    try {
-      // 加载各个步骤的数据
-      const infoData = wx.getStorageSync('studyProcess_1_info');
-      if (infoData) {
-        this.setData({
-          kidsInfo: infoData.kidsInfo || this.data.kidsInfo,
-          venueType: infoData.venueType || '',
-          specificVenue: infoData.specificVenue || '',
-          duration: infoData.duration || '2h'
-        });
-      }
-      
-      const suggestionsData = wx.getStorageSync('studyProcess_1_suggestions');
-      if (suggestionsData) {
-        let suggestions = suggestionsData.suggestions || [];
-        let selectedSuggestions = suggestionsData.selectedSuggestions || [];
-        
-        // 重置所有建议的选中状态
-        suggestions = suggestions.map(suggestion => ({
-            ...suggestion,
-          isSelected: false
-        }));
-        
-        // 只标记真正被选中的建议
-        for (let i = 0; i < suggestions.length; i++) {
-          const isSelected = selectedSuggestions.some(item => item.id === suggestions[i].id);
-          if (isSelected) {
-            suggestions[i].isSelected = true;
-          }
-        }
-        
-        // 重建选中的建议列表，确保与 suggestions 中的选中状态一致
-        selectedSuggestions = [];
-        for (let i = 0; i < suggestions.length; i++) {
-          if (suggestions[i].isSelected) {
-            selectedSuggestions.push(suggestions[i]);
-          }
-        }
-        
-        console.log('从缓存加载的建议数量:', suggestions.length);
-        console.log('从缓存加载的已选择建议数量:', selectedSuggestions.length);
-        
-        this.setData({
-          suggestions: suggestions,
-          selectedSuggestions: selectedSuggestions,
-          stepsEnabled: (selectedSuggestions.length > 0)
-        });
-      }
-      
-      // 加载预研学指导故事
-      const guideStoryData = wx.getStorageSync('studyProcess_1_guideStory');
-      if (guideStoryData && guideStoryData.guideStory) {
-        this.setData({
-          guideStory: guideStoryData.guideStory,
-          guideStoryNodes: guideStoryData.guideStoryNodes || this.parseStoryText(guideStoryData.guideStory),
-          storyImageUrl: guideStoryData.imageUrl || ''  // 加载故事图片URL
-        });
-      }
-      
-      const planData = wx.getStorageSync('studyProcess_2_');
-      if (planData) {
-        this.setData({
-          planTitle: planData.planTitle || '',
-          steps: planData.steps || [],
-          studyCards: planData.studyCards || [],
-          planGenerated: true // 如果有缓存的计划数据，标记为已生成
-        });
-      }
-      
-      const postData = wx.getStorageSync('studyProcess_3_');
-      if (postData) {
-        this.setData({
-          tempFilePaths: postData.tempFilePaths || [],
-          reflectionText: postData.reflectionText || ''
-        });
-      }
-    } catch (e) {
-      console.error('加载缓存数据失败:', e);
-    }
-  },
-  
-  // 以下是从原页面迁移并整合的功能
-  
-  // 基本信息相关函数
-  addKid: function() {
-    let kidsInfo = this.data.kidsInfo;
-    kidsInfo.push({
-      id: kidsInfo.length + 1,
-      gender: '',
-      age: ''
-    });
-    this.setData({
-      kidsInfo: kidsInfo
-    });
-  },
-  
-  // 选择性别
-  selectGender(e) {
-    const { index, gender } = e.currentTarget.dataset;
-    const kidsInfo = this.data.kidsInfo;
-    kidsInfo[index].gender = gender;
-    this.setData({
-      kidsInfo: kidsInfo
-    });
-  },
-  
-  inputAge: function(e) {
-    const index = e.currentTarget.dataset.index;
-    let kidsInfo = this.data.kidsInfo;
-    kidsInfo[index].age = e.detail.value;
-    this.setData({
-      kidsInfo: kidsInfo
-    });
-  },
-  
-  selectVenueType: function(e) {
-    const venueTypeOptions = ['博物馆', '科技馆', '历史遗迹', '自然风光', '自定义'];
-    const index = e.detail.value;
-    
-    // 判断是否自定义
-    if (venueTypeOptions[index] === '自定义') {
-      this.setData({
-        venueType: '自定义',
-        showCustomVenueInput: true,
-        specificVenueOptions: []
       });
-      return;
+    } else if (this.data.collectionPhase === 'interest') {
+      // 兴趣选择阶段的强制开始
+      wx.showModal({
+        title: '跳过兴趣选择',
+        content: '您确定要跳过兴趣选择，直接生成通用建议吗？',
+        confirmText: '跳过选择',
+        cancelText: '继续选择',
+        success: (res) => {
+          if (res.confirm) {
+            this.skipInterestSelection();
+          }
+        }
+      });
     }
-    // 关闭自定义输入
-    this.setData({ showCustomVenueInput: false });
-    // 根据选择的场景类型更新相应的具体场所列表
-    let specificVenueOptions = [];
-    switch(venueTypeOptions[index]) {
-      case '博物馆':
-        specificVenueOptions = ['北京故宫', '上海博物馆', '南京博物院', '湖南省博物馆'];
-        break;
-      case '科技馆':
-        specificVenueOptions = ['上海科技馆', '中国科技馆', '广东科学中心', '深圳科技馆'];
-        break;
-      case '历史遗迹':
-        specificVenueOptions = ['长城', '兵马俑', '莫高窟', '三星堆'];
-        break;
-      case '自然风光':
-        specificVenueOptions = ['黄山', '张家界', '九寨沟', '西双版纳'];
-        break;
-      default:
-        specificVenueOptions = ['北京故宫', '上海科技馆', '长城', '黄山'];
-    }
-    
-    this.setData({
-      venueType: venueTypeOptions[index],
-      specificVenueOptions: specificVenueOptions,
-      specificVenue: '' // 重置具体场所
-    });
   },
   
-  // 自定义场所输入
-  onCustomVenueInput: function(e) {
-    const value = e.detail.value;
-    this.setData({ customVenue: value, specificVenue: value });
-  },
-  
-  selectSpecificVenue: function(e) {
-    const index = e.detail.value;
-    const venue = this.data.specificVenueOptions[index];
-    this.setData({
-      specificVenue: venue
-    });
-  },
-  
-  selectDuration: function(e) {
-    this.setData({
-      duration: e.currentTarget.dataset.time
-    });
-  },
-  
-  // API调用相关函数
-  generateSuggestion: function() {
+  // 新增：调用AI4接口
+  callAI4Interface: function(userInput) {
     const that = this;
     
-    // 基本验证
-    if (!this.validateBasicInfo()) {
-      return;
-    }
+    // 构建对话历史上下文
+    const conversationHistory = this.buildConversationContext();
     
-    // 立即清空现有数据并切换到suggestions子步骤
-    this.setData({
-      suggestions: [],
-      jsonResponse: {},
-      subStep: 'suggestions', // 确保立即切换
-      showSuggestionsTab: true,
-      isLoadingMore: true // 显示加载状态
-    });
-    
-    // 显示加载提示
-    wx.showLoading({
-      title: '生成中...',
-      mask: true
-    });
-    
-    // 构建请求文本
-    const kidsInfo = this.data.kidsInfo.map(kid => 
-      `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
-    ).join('；');
-    
-    // 修改 AI1 提示词：返回 3~5 条建议
-    const promptText = `请根据以下情况生成 3 到 5 条亲子研学活动分析建议，并仅以 JSON 格式返回，格式示例如下：
-    {
-      "suggestions": [
-        {
-          "title": "建议标题",
-          "description": "建议描述",
-          "ageRange": "适合年龄",
-          "learningGoals": "学习目标",
-          "readingMaterials": "导读材料",
-          "wanfaLiucheng": "玩法流程",
-          "gaojieThinking": "高阶思维带动点"
-        }
-      ]
-    }
-      参与者情况：${kidsInfo}
-      目的地类型：${this.data.venueType || '未知场所类型'}
-      具体场所：${this.data.specificVenue || '未知场所'}
-      游览时长：${this.data.duration || '未知时长'}`;
-    
-    console.log('开始请求AI服务1，请求文本:', promptText);
-    
-    // 发送请求到第一个AI
-    this.requestAIStream('1', promptText, 
-      // 处理数据块
-      null,
-      // 完成回调
-      function(result) {
-        wx.hideLoading();
-        console.log('AI建议生成完成');
-        
-        // 确保加载标志关闭
-        that.setData({
-          isLoadingMore: false
-        });
-        
-        // 更新页面标题和保存数据
-        that.updatePageTitle();
-        that.saveCurrentStepData();
-      }
-    );
-    
-    // 设置一个安全定时器，确保即使回调失败，也能关闭加载状态
-    setTimeout(function() {
-      // 检查是否仍在加载
-      if (that.data.isLoadingMore) {
-        console.log('安全定时器触发，关闭加载状态');
-        wx.hideLoading();
-        that.setData({
-          isLoadingMore: false
-        });
-        
-        // 显示请求超时提示
-        wx.showToast({
-          title: '请求超时，请稍后重试',
-          icon: 'none',
-          duration: 2000
-        });
-      }
-    }, 30000); // 30秒超时
-  },
-  
-  // 查看建议详情
-  viewSuggestionDetail: function(e) {
-    const index = parseInt(e.currentTarget.dataset.index);
-    if (isNaN(index) || index < 0 || index >= this.data.suggestions.length) {
-      wx.showToast({
-        title: '无效的建议索引',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    const suggestion = this.data.suggestions[index];
-    console.log('查看建议详情:', index, suggestion);
-    
-    this.setData({
-      currentSuggestion: suggestion,
-      currentSuggestionIndex: index,
-      subStep: 'suggestionDetail'
-    });
-    
-    this.updatePageTitle();
-  },
-  
-  // 返回到建议列表
-  backToSuggestions: function() {
-    this.setData({
-      subStep: 'suggestions',
-      currentSuggestion: null
-    });
-    
-    this.updatePageTitle();
-  },
-  
-  // 选择/取消选择建议
-  toggleSelectSuggestion: function(e) {
-    const index = parseInt(e.currentTarget.dataset.index);
-    if (isNaN(index) || index < 0 || index >= this.data.suggestions.length) {
-      console.error('无效的建议索引:', index);
-      return;
-    }
+    // 全新设计：让AI4具备智能判断和推荐能力的提示词
+    const fullPrompt = `${conversationHistory}
 
-    const suggestions = this.data.suggestions;
-    // 清空已选择的建议数组，重建一个全新的数组，确保只包含用户选择的建议
-    let selectedSuggestions = [];
+用户最新输入: ${userInput}
+
+【你是专业的研学规划助手，具备智能判断和推荐能力】
+
+核心任务：收集研学基本信息并智能决策下一步行动
+必需信息：孩子年龄、性别、研学场所、研学时长
+
+【智能判断三层逻辑】
+
+🔍 第一层：用户回答意愿判断
+- 用户直接提供信息 → 继续收集剩余信息
+- 用户回避/模糊/不耐烦 → 转入推荐模式
+- 判断标准：看用户是否积极配合回答
+
+💡 第二层：智能推荐能力
+- 当用户不愿详细回答时，基于常见研学场景主动推荐
+- 推荐模板："基于常见情况，我为您推荐：X岁Y孩，Z场所，W时长的研学活动"
+- 观察用户对推荐的反应
+
+✅ 第三层：流程决策
+- 用户认可推荐 → 开始生成流程
+- 用户修正推荐 → 基于修正信息开始生成
+- 用户拒绝推荐 → 继续耐心对话
+- 信息足够完整 → 直接开始生成
+
+【开始生成的判断标准】
+满足以下任一条件时，返回特殊JSON格式：
+1. 收集到4项完整信息（年龄、性别、场所、时长）
+2. 用户认可你的推荐信息
+3. 用户表达开始意愿且有基础信息支撑
+4. 多轮对话后用户显示配合但信息略有缺失（可推荐补充）
+
+【特殊输出格式】
+当决定开始生成时，必须严格按以下JSON格式输出：
+
+\`\`\`json
+{
+  "response": "好的！基于我们的对话，我了解您的需求。[总结信息]，现在开始为您生成个性化研学方案...",
+  "action": "START_GENERATION",
+  "data": {
+    "age": "提取或推荐的年龄",
+    "gender": "提取或推荐的性别", 
+    "venue": "提取或推荐的场所",
+    "duration": "提取或推荐的时长"
+  }
+}
+\`\`\`
+
+【语气控制要求】
+- 继续对话时：保持询问和引导语气
+- 提供推荐时：使用建议和征求意见的语气  
+- 开始生成时：使用确认总结的语气，不再询问新信息
+
+【智能推荐数据库】
+年龄推荐：3-6岁(幼儿)、7-9岁(小学低年级)、10-12岁(小学高年级)、13-15岁(中学)
+场所推荐：科技馆、博物馆、自然公园、历史景点、艺术馆
+时长推荐：2小时、半天、全天
+
+当前对话轮次：${this.data.conversationCount}轮
+
+请根据用户输入，运用三层判断逻辑，决定继续对话还是开始生成。记住：你有完全的主动权和决策权！`;
     
-    console.log('切换选择状态:', index, suggestions[index].title, '当前状态:', suggestions[index].isSelected);
+    // 请求参数 - 使用非流式
+    const requestData = {
+      text: fullPrompt,
+      key: this.data.accessKey,
+      stream: false
+    };
+
+    // 服务URL
+    const serviceUrl = `${this.data.serverUrl}/${this.data.serviceId}`;
+    console.log('🤖 调用AI4智能判断接口:', serviceUrl);
     
-    // 更新建议的选中状态
-    suggestions[index].isSelected = !suggestions[index].isSelected;
+    // 使用普通的wx.request发送请求
+    wx.request({
+      url: serviceUrl,
+      method: 'POST',
+      data: requestData,
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': this.data.accessKey
+      },
+      success: function(res) {
+        console.log('🤖 AI4智能判断响应:', res);
+        if (res.statusCode === 200) {
+          let aiContent = '';
+          
+          // 处理响应数据
+          if (res.data && res.data.content) {
+            aiContent = res.data.content;
+          } else if (res.data && typeof res.data === 'string') {
+            aiContent = res.data;
+          } else {
+            aiContent = '抱歉，我暂时无法理解您的问题，请重新描述一下。';
+          }
+          
+          // 检查是否包含JSON格式的开始指令
+          const jsonMatch = aiContent.match(/```json\s*\n([\s\S]*?)\n\s*```/);
+          let shouldStart = false;
+          let extractedData = null;
+          let responseText = aiContent;
+          
+          if (jsonMatch) {
+            try {
+              const jsonData = JSON.parse(jsonMatch[1]);
+              if (jsonData.action === 'START_GENERATION' && jsonData.data) {
+                shouldStart = true;
+                extractedData = jsonData.data;
+                responseText = jsonData.response || responseText;
+                console.log('✅ AI4决定开始生成，提取数据:', extractedData);
+              }
+            } catch (parseError) {
+              console.error('❌ JSON解析失败:', parseError);
+            }
+          }
+          
+          // 清理JSON标记，只显示回复内容
+          responseText = responseText.replace(/```json[\s\S]*?```/g, '').trim();
+          
+          // 添加AI回复消息
+          const aiMessage = {
+            id: Date.now(),
+            role: 'assistant',
+            content: responseText
+          };
+          
+          const newMessages = [...that.data.chatMessages, aiMessage];
+          that.setData({
+            chatMessages: newMessages,
+            isAIResponding: false
+          });
+          
+          // 根据AI决策执行相应行动
+          if (shouldStart && extractedData) {
+            console.log('🚀 AI4智能决策：开始生成流程');
+            setTimeout(() => {
+              that.startGenerationWithAIData(extractedData);
+            }, 1500);
+          } else {
+            console.log('💬 AI4智能决策：继续对话收集信息');
+            
+            // 轻量级兜底机制：对话过多时提供手动选择
+            const conversationCount = that.data.conversationCount;
+            if (conversationCount >= 15 && !that.data.showForceStartBtn) {
+              that.setData({
+                showForceStartBtn: true
+              });
+              
+              const hintMessage = {
+                id: Date.now() + 1,
+                role: 'assistant',
+                content: '如果您希望快速开始，也可以点击"直接开始"按钮。'
+              };
+              
+              const updatedMessages = [...that.data.chatMessages, hintMessage];
+              that.setData({
+                chatMessages: updatedMessages
+              });
+            }
+          }
+          
+        } else {
+          that.handleAIError('服务器返回状态码 ' + res.statusCode);
+        }
+      },
+      fail: function(err) {
+        console.error('❌ AI4请求失败:', err);
+        that.handleAIError('网络请求失败，请检查网络连接');
+      }
+    });
+  },
+  
+  // 新增：根据AI提取的数据开始生成
+  startGenerationWithAIData: function(extractedData) {
+    console.log('🔧 根据AI提取数据开始生成:', extractedData);
     
-    // 重建已选择的建议列表
-    for (let i = 0; i < suggestions.length; i++) {
-      if (suggestions[i].isSelected) {
-        selectedSuggestions.push(suggestions[i]);
+    // 转换AI提取的数据为系统格式
+    const processedData = {
+      kidsInfo: [{
+        id: 1,
+        gender: extractedData.gender || '男',
+        age: extractedData.age ? extractedData.age.replace(/岁|年级/, '') : '8'
+      }],
+      venueType: this.inferVenueType(extractedData.venue),
+      specificVenue: extractedData.venue || '科技馆',
+      duration: extractedData.duration || '半天'
+    };
+    
+    console.log('📋 转换后的数据:', processedData);
+    
+    // 设置基本信息到data中
+    this.setData({
+      kidsInfo: processedData.kidsInfo,
+      venueType: processedData.venueType,
+      specificVenue: processedData.specificVenue,
+      duration: processedData.duration
+    });
+    
+    // 直接进入兴趣选择阶段
+    this.triggerInterestSelection();
+  },
+  
+  // 新增：根据场所名称推断场所类型
+  inferVenueType: function(venueName) {
+    if (!venueName) return '博物馆';
+    
+    const venueTypeMap = {
+      '科技馆': '科技馆',
+      '博物馆': '博物馆', 
+      '美术馆': '美术馆',
+      '艺术馆': '美术馆',
+      '公园': '公园',
+      '动物园': '公园',
+      '植物园': '公园',
+      '海洋馆': '海洋馆',
+      '水族馆': '海洋馆',
+      '故宫': '历史景点',
+      '长城': '历史景点'
+    };
+    
+    for (let keyword in venueTypeMap) {
+      if (venueName.includes(keyword)) {
+        return venueTypeMap[keyword];
       }
     }
     
-    // 打印诊断信息
-    console.log('已选择建议数量:', selectedSuggestions.length);
-    selectedSuggestions.forEach((suggestion, idx) => {
-      console.log(`已选择建议 ${idx+1}:`, suggestion.title);
-    });
-    
-    // 如果当前正在查看详情的建议，也要更新其状态
-    let currentSuggestion = this.data.currentSuggestion;
-    if (currentSuggestion && currentSuggestion.id === suggestions[index].id) {
-      currentSuggestion = {...suggestions[index]};
-    }
-    
-    this.setData({
-      suggestions: suggestions,
-      selectedSuggestions: selectedSuggestions,
-      currentSuggestion: currentSuggestion,
-      stepsEnabled: selectedSuggestions.length > 0 // 只要选择了至少一个建议就启用其他步骤
-    });
-    
-    console.log('选择后状态:', '已选建议数:', selectedSuggestions.length, 'stepsEnabled:', this.data.stepsEnabled);
-    
-    this.saveCurrentStepData();
+    return '博物馆'; // 默认类型
   },
   
-  // 根据选择的建议生成研学计划
-  generatePlan: function() {
+  // 新增：构建对话上下文
+  buildConversationContext: function() {
+    const messages = this.data.chatMessages;
+    let context = "【你是专业的研学规划助手】\n";
+    context += "你的任务是收集研学基本信息并智能决策何时开始生成。\n\n";
+    
+    context += "对话历史：\n";
+    
+    // 保留最近的10条消息作为上下文
+    const recentMessages = messages.slice(-10);
+    recentMessages.forEach(msg => {
+      const role = msg.role === 'assistant' ? '助手' : '用户';
+      context += `${role}: ${msg.content}\n`;
+    });
+    
+    return context;
+  },
+  
+  // 新增：处理AI错误
+  handleAIError: function(errorMsg) {
+    const errorMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `抱歉，我遇到了一些问题：${errorMsg}\n\n请重新发送您的消息，我会继续为您服务。`
+    };
+    
+    const newMessages = [...this.data.chatMessages, errorMessage];
+    this.setData({
+      chatMessages: newMessages,
+      isAIResponding: false
+    });
+    
+    wx.showToast({
+      title: 'AI服务暂时不可用',
+      icon: 'none'
+    });
+  },
+  
+  // 新增：检查信息是否收集完整
+  checkInfoComplete: function() {
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
+    
+    // 智能分析对话内容，检查是否包含必要信息
+    const hasAgeInfo = this.extractAgeInfo(conversationText);
+    const hasGenderInfo = this.extractGenderInfo(conversationText);
+    const hasVenueInfo = this.extractVenueInfo(conversationText);
+    const hasDurationInfo = this.extractDurationInfo(conversationText);
+    
+    console.log('信息收集状态:', {
+      hasAgeInfo,
+      hasGenderInfo, 
+      hasVenueInfo,
+      hasDurationInfo
+    });
+    
+    // 如果所有必要信息都收集到了，触发建议生成
+    if (hasAgeInfo && hasGenderInfo && hasVenueInfo && hasDurationInfo) {
+      setTimeout(() => {
+        this.triggerSuggestionGeneration();
+      }, 2000);
+    }
+  },
+  
+  // 新增：检查用户开始意愿
+  checkStartIntent: function(text) {
+    const startPatterns = [
+      /开始|开始吧|可以开始/,
+      /就这样|够了|行了/,
+      /直接开始|马上开始/,
+      /可以了|OK|ok/,
+      /不用了|算了|跳过/,
+      /快点|着急|赶时间/
+    ];
+    
+    return startPatterns.some(pattern => pattern.test(text));
+  },
+  
+  // 新增：AI4智能触发建议生成
+  triggerSuggestionFromAI4: function() {
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
+    
+    // 智能提取可用信息，对缺失信息使用合理默认值
+    const extractedInfo = this.extractInfoWithDefaults(conversationText);
+    
+    console.log('AI4触发，提取的信息:', extractedInfo);
+    
+    // 更新数据
+    this.setData(extractedInfo);
+    
+    // 添加AI提示消息
+    const aiMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: '好的！基于您提供的信息，我现在为您生成个性化的研学建议。对于未明确的部分，我将使用合适的默认设置...'
+    };
+    
+    const newMessages = [...this.data.chatMessages, aiMessage];
+    this.setData({
+      chatMessages: newMessages,
+      isLoadingSuggestions: true
+    });
+    
+    // 延迟生成，让用户看到提示
+    setTimeout(() => {
+      this.generateSuggestion();
+    }, 1000);
+  },
+  
+  // 新增：智能提取信息并使用默认值
+  extractInfoWithDefaults: function(text) {
+    console.log('🔍 开始提取对话信息，文本长度:', text.length);
+    
+    // 增强年龄提取逻辑
+    let age = '8'; // 默认年龄
+    const agePatterns = [
+      /(\d+)\s*岁/g,
+      /(\d+)\s*年级/g,
+      /年龄.*?(\d+)/g,
+      /(\d+)\s*周岁/g,
+      /今年\s*(\d+)/g
+    ];
+    
+    for (let pattern of agePatterns) {
+      const matches = text.matchAll(pattern);
+      for (let match of matches) {
+        const extractedAge = parseInt(match[1]);
+        if (extractedAge >= 3 && extractedAge <= 18) {
+          age = extractedAge.toString();
+          console.log('✅ 提取到年龄:', age);
+          break;
+        }
+      }
+      if (age !== '8') break;
+    }
+    
+    // 根据学段推断年龄
+    if (age === '8') {
+      if (/幼儿园|学前|小班|中班|大班/.test(text)) {
+        age = '5';
+        console.log('📚 根据学段推断年龄:', age, '(幼儿园)');
+      } else if (/小学|小学生|一年级|二年级|三年级|四年级|五年级|六年级/.test(text)) {
+        age = '8';
+        console.log('📚 根据学段推断年龄:', age, '(小学)');
+      } else if (/中学|初中|中学生|七年级|八年级|九年级/.test(text)) {
+        age = '12';
+        console.log('📚 根据学段推断年龄:', age, '(中学)');
+      }
+    }
+    
+    // 增强性别提取逻辑
+    let gender = '男'; // 默认性别
+    const genderPatterns = [
+      { pattern: /女孩|女生|女儿|女娃|女童|小女孩|女宝|女宝宝/, gender: '女' },
+      { pattern: /男孩|男生|儿子|男娃|男童|小男孩|男宝|男宝宝/, gender: '男' }
+    ];
+    
+    for (let { pattern, gender: g } of genderPatterns) {
+      if (pattern.test(text)) {
+        gender = g;
+        console.log('✅ 提取到性别:', gender);
+        break;
+      }
+    }
+    
+    // 增强场所提取逻辑
+    let venueType = '其他场所';
+    let specificVenue = '';
+    
+    // 更灵活的场所提取 - 识别各种场所表达
+    const venuePatterns = [
+      // 教育场所
+      /去(?:到)?([^，。！？\s]*(?:大学|学院|学校|图书馆|实验室|教室))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:大学|学院|学校|图书馆|实验室|教室))/g,
+      /参观([^，。！？\s]*(?:大学|学院|学校|图书馆|实验室|教室))/g,
+      
+      // 博物馆类
+      /去(?:到)?([^，。！？\s]*(?:博物馆|纪念馆|展览馆|文物馆))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:博物馆|纪念馆|展览馆|文物馆))/g,
+      /参观([^，。！？\s]*(?:博物馆|纪念馆|展览馆|文物馆))/g,
+      
+      // 科技场所
+      /去(?:到)?([^，。！？\s]*(?:科技馆|科学馆|天文馆|海洋馆|水族馆))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:科技馆|科学馆|天文馆|海洋馆|水族馆))/g,
+      /参观([^，。！？\s]*(?:科技馆|科学馆|天文馆|海洋馆|水族馆))/g,
+      
+      // 文化艺术场所
+      /去(?:到)?([^，。！？\s]*(?:美术馆|艺术馆|画廊|文化中心|艺术中心))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:美术馆|艺术馆|画廊|文化中心|艺术中心))/g,
+      /参观([^，。！？\s]*(?:美术馆|艺术馆|画廊|文化中心|艺术中心))/g,
+      
+      // 公园景点
+      /去(?:到)?([^，。！？\s]*(?:公园|动物园|植物园|游乐园|主题公园))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:公园|动物园|植物园|游乐园|主题公园))/g,
+      /参观([^，。！？\s]*(?:公园|动物园|植物园|游乐园|主题公园))/g,
+      
+      // 历史建筑
+      /去(?:到)?([^，。！？\s]*(?:故宫|长城|寺庙|古镇|遗址|古建筑))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:故宫|长城|寺庙|古镇|遗址|古建筑))/g,
+      /参观([^，。！？\s]*(?:故宫|长城|寺庙|古镇|遗址|古建筑))/g,
+      
+      // 其他场所
+      /去(?:到)?([^，。！？\s]*(?:中心|基地|场馆|会馆|厅|院|所))/g,
+      /(?:想去|要去|计划去)([^，。！？\s]*(?:中心|基地|场馆|会馆|厅|院|所))/g,
+      /参观([^，。！？\s]*(?:中心|基地|场馆|会馆|厅|院|所))/g
+    ];
+    
+    // 从所有匹配中找到最长最具体的场所名称
+    let extractedVenues = [];
+    for (let pattern of venuePatterns) {
+      const matches = text.matchAll(pattern);
+      for (let match of matches) {
+        if (match[1] && match[1].trim()) {
+          extractedVenues.push(match[1].trim());
+        }
+      }
+    }
+    
+    if (extractedVenues.length > 0) {
+      // 选择最长的场所名称（通常最具体）
+      specificVenue = extractedVenues.reduce((longest, current) => 
+        current.length > longest.length ? current : longest
+      );
+      
+      // 根据场所名称推断类型
+      if (/大学|学院|学校|图书馆|实验室|教室/.test(specificVenue)) {
+        venueType = '教育场所';
+      } else if (/博物馆|纪念馆|展览馆|文物馆/.test(specificVenue)) {
+        venueType = '博物馆';
+      } else if (/科技馆|科学馆|天文馆/.test(specificVenue)) {
+        venueType = '科技馆';
+      } else if (/海洋馆|水族馆/.test(specificVenue)) {
+        venueType = '海洋馆';
+      } else if (/美术馆|艺术馆|画廊/.test(specificVenue)) {
+        venueType = '美术馆';
+      } else if (/公园|动物园|植物园|游乐园/.test(specificVenue)) {
+        venueType = '公园';
+      } else if (/故宫|长城|寺庙|古镇|遗址/.test(specificVenue)) {
+        venueType = '历史景点';
+      } else if (/中心|基地|场馆/.test(specificVenue)) {
+        venueType = '文化场所';
+      } else {
+        venueType = '其他场所';
+      }
+      
+      console.log('✅ 提取到具体场所:', specificVenue, '类型:', venueType);
+    } else {
+      // 如果没有提取到具体场所，尝试识别场所类型
+      const venueTypePatterns = [
+        { pattern: /大学|学院|学校|图书馆/, type: '教育场所', venue: '大学图书馆' },
+        { pattern: /科技馆|科学馆/, type: '科技馆', venue: '科技馆' },
+        { pattern: /美术馆|艺术馆/, type: '美术馆', venue: '美术馆' },
+        { pattern: /博物馆|历史馆/, type: '博物馆', venue: '博物馆' },
+        { pattern: /动物园|植物园|公园/, type: '公园', venue: '公园' },
+        { pattern: /海洋馆|水族馆/, type: '海洋馆', venue: '海洋馆' }
+      ];
+      
+      for (let { pattern, type, venue } of venueTypePatterns) {
+        if (pattern.test(text)) {
+          venueType = type;
+          specificVenue = venue;
+          console.log('✅ 根据类型推断场所:', specificVenue, '类型:', venueType);
+          break;
+        }
+      }
+      
+      // 如果还是没有，使用默认值
+      if (!specificVenue) {
+        venueType = '博物馆';
+        specificVenue = '博物馆';
+        console.log('🔄 使用默认场所:', specificVenue);
+      }
+    }
+    
+    // 增强时长提取逻辑
+    let duration = '半天'; // 默认时长
+    const durationPatterns = [
+      { pattern: /2\s*小时|2\s*h|两\s*小时/, duration: '2h' },
+      { pattern: /4\s*小时|4\s*h|四\s*小时/, duration: '4h' },
+      { pattern: /全天|一天|整天|一整天/, duration: '全天' },
+      { pattern: /半天|上午|下午|半日/, duration: '半天' }
+    ];
+    
+    for (let { pattern, duration: d } of durationPatterns) {
+      if (pattern.test(text)) {
+        duration = d;
+        console.log('✅ 提取到时长:', duration);
+        break;
+      }
+    }
+    
+    const result = {
+      kidsInfo: [{
+        id: 1,
+        gender: gender,
+        age: age
+      }],
+      venueType: venueType,
+      specificVenue: specificVenue,
+      duration: duration
+    };
+    
+    console.log('📋 信息提取完成:', result);
+    return result;
+  },
+  
+  // 新增：提取年龄信息
+  extractAgeInfo: function(text) {
+    const agePatterns = [
+      /(\d+)\s*岁/,
+      /(\d+)\s*年级/,
+      /年龄.*?(\d+)/,
+      /(\d+)\s*周岁/
+    ];
+    
+    for (let pattern of agePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const age = parseInt(match[1]);
+        if (age >= 3 && age <= 18) {
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+  
+  // 新增：提取性别信息
+  extractGenderInfo: function(text) {
+    const genderPatterns = [
+      /男孩|男生|儿子|男娃|男童/,
+      /女孩|女生|女儿|女娃|女童/
+    ];
+    
+    return genderPatterns.some(pattern => pattern.test(text));
+  },
+  
+  // 新增：提取场所信息
+  extractVenueInfo: function(text) {
+    const venuePatterns = [
+      /博物馆|科技馆|美术馆|历史馆/,
+      /故宫|长城|天安门|颐和园/,
+      /公园|动物园|植物园|海洋馆/,
+      /科学中心|文化中心|展览馆/,
+      /古镇|古城|遗址|景区/
+    ];
+    
+    return venuePatterns.some(pattern => pattern.test(text));
+  },
+  
+  // 新增：提取时长信息
+  extractDurationInfo: function(text) {
+    const durationPatterns = [
+      /\d+\s*小时/,
+      /半天|全天|一天/,
+      /上午|下午|整天/,
+      /\d+\s*h/
+    ];
+    
+    return durationPatterns.some(pattern => pattern.test(text));
+  },
+  
+  // 新增：触发建议生成
+  triggerSuggestionGeneration: function() {
+    // 添加AI提示消息
+    const aiMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: '太好了！我已经收集到了所有必要信息。现在正在为您生成个性化的研学分析建议，请稍等片刻...'
+    };
+    
+    const newMessages = [...this.data.chatMessages, aiMessage];
+    this.setData({
+      chatMessages: newMessages,
+      isLoadingSuggestions: true
+    });
+    
+    this.generateSuggestion();
+  },
+  
+  // 新增：从对话中提取信息并生成建议
+  generateSuggestionFromChat: function() {
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
+    
+    // 智能提取具体信息
+    const extractedInfo = {
+      kidsInfo: this.extractKidsInfo(conversationText),
+      venueType: this.extractVenueType(conversationText),
+      specificVenue: this.extractSpecificVenue(conversationText),
+      duration: this.extractDuration(conversationText)
+    };
+    
+    console.log('提取的信息:', extractedInfo);
+    
+    this.setData(extractedInfo);
+    this.generateSuggestion();
+  },
+  
+  // 新增：提取孩子信息
+  extractKidsInfo: function(text) {
+    const ageMatch = text.match(/(\d+)\s*岁/);
+    const age = ageMatch ? ageMatch[1] : '8';
+    
+    const isMale = /男孩|男生|儿子|男娃|男童/.test(text);
+    const gender = isMale ? '男' : '女';
+    
+    return [{
+      id: 1,
+      gender: gender,
+      age: age
+    }];
+  },
+  
+  // 新增：提取场所类型
+  extractVenueType: function(text) {
+    if (/博物馆/.test(text)) return '博物馆';
+    if (/科技馆/.test(text)) return '科技馆';
+    if (/美术馆/.test(text)) return '美术馆';
+    if (/公园|动物园|植物园/.test(text)) return '公园';
+    if (/海洋馆/.test(text)) return '海洋馆';
+    return '博物馆'; // 默认值
+  },
+  
+  // 新增：提取具体场所
+  extractSpecificVenue: function(text) {
+    const venues = [
+      '北京故宫', '上海科技馆', '中国国家博物馆', 
+      '北京动物园', '上海海洋水族馆', '西安兵马俑'
+    ];
+    
+    for (let venue of venues) {
+      if (text.includes(venue) || text.includes(venue.slice(2))) {
+        return venue;
+      }
+    }
+    
+    // 根据场所类型返回默认值
+    const venueType = this.extractVenueType(text);
+    const defaultVenues = {
+      '博物馆': '北京故宫',
+      '科技馆': '上海科技馆',
+      '美术馆': '中国美术馆',
+      '公园': '北京动物园',
+      '海洋馆': '上海海洋水族馆'
+    };
+    
+    return defaultVenues[venueType] || '北京故宫';
+  },
+  
+  // 新增：提取时长
+  extractDuration: function(text) {
+    if (/2\s*小时|2\s*h/.test(text)) return '2h';
+    if (/4\s*小时|4\s*h/.test(text)) return '4h';
+    if (/半天/.test(text)) return '半天';
+    if (/全天|一天|整天/.test(text)) return '全天';
+    return '半天'; // 默认值
+  },
+  
+  // 新增：开始并发生成
+  startGeneration: function() {
     if (this.data.selectedSuggestions.length === 0) {
       wx.showToast({
         title: '请至少选择一个建议',
@@ -591,418 +960,893 @@ Page({
       return;
     }
     
-    // 先生成预研学指导故事
-    this.generateGuideStory()
-      .then(() => {
-        // 自动切换到指导故事页面
-        this.switchSubStep({ currentTarget: { dataset: { subStep: 'guideStory' } } });
-      })
-      .catch(error => {
-        console.error('生成预研学指导故事失败:', error);
-        
-        // 如果生成失败，仍然继续研学计划
-        this.generateStudyPlan();
-      });
+    this.setData({
+      showGenerationArea: true,
+      guideStoryStatus: 'loading',
+      studyPlanStatus: 'loading',
+      guideStoryStatusText: '生成中...',
+      studyPlanStatusText: '生成中...'
+    });
+    
+    this.generateConcurrently();
   },
   
-  // 生成预研学指导故事
-  generateGuideStory: function() {
+  // 新增：并发生成
+  generateConcurrently: function() {
     const that = this;
     
-    // 如果未选择任何研学建议，显示提示
-    if (that.data.selectedSuggestions.length === 0) {
-      wx.showToast({
-        title: '请先选择研学建议',
-        icon: 'none',
-        duration: 2000
-      });
-      return;
-    }
-    
-    // 检查是否需要基本信息
-    if (!that.data.specificVenue || !that.data.venueType) {
-      wx.showToast({
-        title: '请先完善基本信息',
-        icon: 'none',
-        duration: 2000
-      });
-      // 切换到信息页面
-      that.setData({
-        subStep: 'info'
-      });
-      return;
-    }
-    
-    // 显示加载提示
-    wx.showLoading({
-      title: '正在生成导读材料...',
-      mask: true
-    });
-    
-    // 设置计划生成超时提示
-    const storyTimeoutId = setTimeout(() => {
-      wx.showToast({
-        title: '导读材料生成中，请耐心等待',
-        icon: 'none',
-        duration: 3000
-      });
-    }, 30000); // 30秒后提示
-    
-    // 确保有指导故事的字段
-    that.setData({
-      guideStory: '',
-      guideStoryNodes: null,
-      storyImageUrl: '',
-      isLoadingImage: false
-    });
-    
-    // 构造AI提示
-    const kidsInfo = that.data.kidsInfo.map(kid => 
-      `孩子${kid.id}: ${kid.gender === 'male' ? '男' : '女'}, ${kid.age}岁`
-    ).join('\n');
-    
-    const selectedSuggestions = that.data.selectedSuggestions.map(suggestion => 
-      suggestion.title + ': ' + suggestion.description
-    ).join('\n\n');
-    
-    // 构建简明提示文本
-    const promptText = 
-`研学场所类型: ${that.data.venueType}
-具体场所: ${that.data.specificVenue}
-参与者: ${kidsInfo}
-用户选择的研学建议: ${selectedSuggestions}
-`;
-    
-    console.log('开始生成研学指导故事，请求内容:', promptText);
-    
-    // 请求第二个AI模型
-    return new Promise((resolve, reject) => {
-      that.requestAIStream('2', promptText, 
-        null, // 不需要处理数据块
-        function(storyText) {
-          // 清除超时定时器
-          clearTimeout(storyTimeoutId);
-          
-          // 将文本转换为富文本
-          const storyNodes = that.parseStoryText(storyText);
-          
-          // 更新数据
-          that.setData({
-            guideStory: storyText,
-            guideStoryNodes: storyNodes,
-            stepsEnabled: true, // 生成故事后允许进入研学中和研学后步骤
-          });
-          
-          wx.hideLoading();
-          
-          // 自动切换到导读材料页面
-          that.setData({
-            subStep: 'guideStory',
-          });
-          that.updatePageTitle();
-          
-          // 保存导读材料到缓存
-          try {
-            wx.setStorageSync('studyProcess_1_guideStory', {
-              story: storyText,
-              storyNodes: storyNodes
+    Promise.allSettled([
+      this.generateGuideStoryAsync(),
+      this.generateStudyPlanAsync()
+    ]).then(results => {
+      let allCompleted = true;
+      
+      results.forEach((result, index) => {
+        if (index === 0) {
+          if (result.status === 'fulfilled') {
+            that.setData({
+              guideStoryStatus: 'completed',
+              guideStoryStatusText: '生成完成'
             });
-          } catch (e) {
-            console.error('保存指导故事失败:', e);
+          } else {
+            that.setData({
+              guideStoryStatus: 'error',
+              guideStoryStatusText: '生成失败'
+            });
+            allCompleted = false;
           }
-          
-          // 显示图片生成提示
-          wx.showLoading({
-            title: '正在生成插图...',
-            mask: true
-          });
-          
-          // 生成故事关联图片
-          that.generateStoryImage(storyText)
-            .then(() => {
-              console.log('故事图片生成成功');
-              wx.hideLoading();
-            })
-            .catch(err => {
-              console.error('故事图片生成失败:', err);
-              wx.hideLoading();
-              wx.showToast({
-                title: '图片生成失败，但导读材料已生成',
-                icon: 'none',
-                duration: 2000
-              });
-            })
-            .finally(() => {
-              that.saveCurrentStepData();
-              that.setData({
-                isLoadingImage: false
-              });
-              resolve();
+        } else {
+          if (result.status === 'fulfilled') {
+            that.setData({
+              studyPlanStatus: 'completed',
+              studyPlanStatusText: '生成完成'
             });
+          } else {
+            that.setData({
+              studyPlanStatus: 'error',
+              studyPlanStatusText: '生成失败'
+            });
+            allCompleted = false;
+          }
         }
-      );
+      });
+      
+      // 检查是否所有内容都已成功生成
+      if (allCompleted && that.data.guideStory && that.data.planTitle && that.data.studyCards.length > 0) {
+        console.log('✅ 所有AI内容生成完成，完成研学按钮已激活');
+      } else {
+        console.log('⚠️ 部分AI内容生成失败或未完成');
+      }
     });
   },
   
-  // 生成故事配图 - 完全简化版本
-  generateStoryImage: function(storyText) {
+  // 新增：异步生成导读材料
+  generateGuideStoryAsync: function() {
     const that = this;
-    
-    // 构建一个非常简短的图像生成提示
-    const imagePromptText = `为"${this.data.specificVenue || '研学场所'}"的研学故事创建一张适合儿童的插图`;
-    
-    console.log('发送简化的图片生成请求:', imagePromptText);
-    
     return new Promise((resolve, reject) => {
-      // 显示加载状态
-      that.setData({
-        isLoadingImage: true
-      });
+      // 构建AI2的提示词
+      const kidsInfo = this.data.kidsInfo[0];
+      const selectedTitles = this.data.selectedSuggestions.map(s => s.title).join('、');
       
-      // 设置图片生成超时定时器
-      const imageTimeoutId = setTimeout(() => {
-        wx.showToast({
-          title: '图片生成需要较长时间，请耐心等待',
-          icon: 'none',
-          duration: 3000
-        });
-      }, 30000); // 30秒后提示等待
-      
-      // 简化的图片生成请求
+      const prompt = `请为以下研学活动生成一个有趣的导读故事：
+
+研学信息：
+- 孩子年龄：${kidsInfo.age}岁
+- 研学场所：${this.data.specificVenue}
+- 选择的建议：${selectedTitles}
+- 研学时长：${this.data.duration}
+
+请生成一个适合${kidsInfo.age}岁孩子的导读故事，包含：
+1. 引人入胜的开头
+2. 与场所相关的历史或文化背景
+3. 激发孩子探索兴趣的内容
+4. 适合的语言风格和长度
+
+故事长度控制在300-500字。`;
+
+      // 调用AI2接口
       wx.request({
-        url: 'http://119.3.217.132:5000/pic/1',
+        url: `${that.data.serverUrl}/2`,
         method: 'POST',
         data: {
-          text: imagePromptText,
-          key: 'hjl2004'
+          text: prompt,
+          key: that.data.accessKey,
+          stream: false
         },
         header: {
           'Content-Type': 'application/json',
-          'X-Access-Key': 'hjl2004'
+          'X-Access-Key': that.data.accessKey
         },
         success: function(res) {
-          clearTimeout(imageTimeoutId);
-          console.log('图像生成响应:', res);
-          
-          // 最简单的响应处理 - 只检查最基本的条件
-          if (res.statusCode === 200 && res.data && res.data.url) {
-            console.log('成功获取图片URL:', res.data.url);
+          console.log('AI2导读生成成功:', res);
+          if (res.statusCode === 200) {
+            let storyContent = '';
             
-            // 保存图片URL
-            that.setData({
-              storyImageUrl: res.data.url,
-              isLoadingImage: false
-            });
-            
-            // 保存到缓存
-            try {
-              const storyData = wx.getStorageSync('studyProcess_1_guideStory') || {};
-              storyData.imageUrl = res.data.url;
-              wx.setStorageSync('studyProcess_1_guideStory', storyData);
-            } catch(e) {
-              console.error('保存图片URL失败:', e);
+            // 处理响应数据
+            if (res.data && res.data.content) {
+              storyContent = res.data.content;
+            } else if (res.data && typeof res.data === 'string') {
+              storyContent = res.data;
+            } else {
+              storyContent = that.getDefaultGuideStory();
             }
             
-            resolve(res.data.url);
-          } else {
-            console.error('获取图片URL失败:', res.data);
+            // 🔧 优化：立即设置文字内容和状态，触发按钮显示
             that.setData({
-              isLoadingImage: false
+              guideStory: storyContent,
+              guideStoryNodes: storyContent,
+              guideStoryStatusText: '文字内容已完成'
             });
             
-            // 显示友好的错误提示
-            wx.showToast({
-              title: '图片生成失败，请稍后再试',
-              icon: 'none',
-              duration: 2000
-            });
+            console.log('📖 导读文字内容生成完成，进入研学流程按钮已显示');
             
-            reject(new Error('获取图片URL失败'));
+            // 🎨 异步生成故事插图（不阻塞用户体验）
+            setTimeout(() => {
+              that.generateStoryImageAsync(storyContent);
+            }, 500);
+            
+            resolve(storyContent);
+          } else {
+            console.error('AI2服务返回错误:', res.statusCode);
+            const defaultStory = that.getDefaultGuideStory();
+            that.setData({
+              guideStory: defaultStory,
+              guideStoryNodes: defaultStory,
+              guideStoryStatusText: '使用默认内容'
+            });
+            console.log('📖 使用默认导读内容，进入研学流程按钮已显示');
+            reject(err);
           }
         },
         fail: function(err) {
-          clearTimeout(imageTimeoutId);
-          console.error('请求图像生成服务失败:', err);
-          
+          console.error('AI2导读生成失败:', err);
+          const defaultStory = that.getDefaultGuideStory();
           that.setData({
-            isLoadingImage: false
+            guideStory: defaultStory,
+            guideStoryNodes: defaultStory,
+            guideStoryStatusText: '使用默认内容'
           });
-          
-          // 显示友好的错误提示
-          wx.showToast({
-            title: '图片请求失败，网络异常',
-            icon: 'none',
-            duration: 2000
-          });
-          
+          console.log('📖 使用默认导读内容，进入研学流程按钮已显示');
           reject(err);
         }
       });
     });
   },
   
-  // 辅助方法：将故事文本转换为 rich-text 节点，支持序号加粗和换行
-  parseStoryText: function(text) {
-    // 首先移除所有的"---"分隔线
-    text = text.replace(/^---+$/gm, '');
+  // 新增：异步生成故事插图（独立方法）
+  generateStoryImageAsync: function(storyContent) {
+    const that = this;
     
-    const lines = text.split('\n').filter(l => l.trim());
-    return lines.map(line => {
-      // 处理序号加粗
-      let match = line.match(/^(\d+[\.、]|[一二三四五六七八九十]、)/);
-      if (match) {
-        return {
-          name: 'div',
-          attrs: { class: 'story-line' },
-          children: [
-            { name: 'strong', children: [{ type: 'text', text: match[0] }] },
-            { type: 'text', text: line.slice(match[0].length) }
-          ]
-        };
-      } 
-      // 处理 **文本** 双星号加粗格式
-      else if (line.includes('**')) {
-        const parts = [];
-        let lastIndex = 0;
-        let boldStart = -1;
-        
-        // 查找所有 ** 标记位置
-        for (let i = 0; i < line.length - 1; i++) {
-          if (line[i] === '*' && line[i+1] === '*') {
-            if (boldStart === -1) {
-              // 开始加粗
-              if (i > lastIndex) {
-                parts.push({ type: 'text', text: line.substring(lastIndex, i) });
-              }
-              boldStart = i;
-              i++; // 跳过第二个 *
-            } else {
-              // 结束加粗
-              const boldText = line.substring(boldStart + 2, i);
-              if (boldText) {
-                parts.push({ 
-                  name: 'strong', 
-                  children: [{ type: 'text', text: boldText }] 
-                });
-              }
-              boldStart = -1;
-              lastIndex = i + 2;
-              i++; // 跳过第二个 *
-            }
-          }
+    // 设置图片生成状态
+    this.setData({
+      isGeneratingImage: true,
+      guideStoryStatusText: '正在生成插图...'
+    });
+    
+    // 从故事内容中提取关键信息作为图像提示
+    const imagePrompt = this.extractImagePrompt(storyContent);
+    
+    console.log('🎨 开始生成故事插图，提示词:', imagePrompt);
+    
+    // 调用图像生成接口
+    wx.request({
+      url: `${this.data.serverUrl}/pic/1`,
+      method: 'POST',
+      data: {
+        text: imagePrompt,
+        key: this.data.accessKey
+      },
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': this.data.accessKey
+      },
+      timeout: 60000, // 图像生成可能需要较长时间
+      success: function(res) {
+        console.log('🖼️ 插图生成响应:', res);
+        if (res.statusCode === 200 && res.data && res.data.url) {
+          that.setData({
+            storyImageUrl: res.data.url,
+            isGeneratingImage: false,
+            guideStoryStatusText: '完全生成完成'
+          });
+          console.log('✅ 故事插图生成成功:', res.data.url);
+        } else {
+          that.setData({
+            isGeneratingImage: false,
+            imageError: '插图生成失败',
+            guideStoryStatusText: '文字内容已完成'
+          });
+          console.error('❌ 插图生成失败:', res);
         }
-        
-        // 添加最后一部分文本
-        if (lastIndex < line.length) {
-          parts.push({ type: 'text', text: line.substring(lastIndex) });
-        }
-        
-        return {
-          name: 'div',
-          attrs: { class: 'story-line' },
-          children: parts
-        };
-      } else {
-        return { name: 'div', attrs: { class: 'story-line' }, children: [{ type: 'text', text: line }] };
+      },
+      fail: function(err) {
+        console.error('❌ 插图生成请求失败:', err);
+        that.setData({
+          isGeneratingImage: false,
+          imageError: '网络错误，插图生成失败',
+          guideStoryStatusText: '文字内容已完成'
+        });
       }
     });
   },
   
-  // 从导读材料页直接开始研学活动
-  startStudyActivity: function() {
-    this.generateStudyPlan();
+  // 新增：异步生成研学方案
+  generateStudyPlanAsync: function() {
+    const that = this;
+    return new Promise((resolve, reject) => {
+      // 构建AI3的提示词
+      const kidsInfo = this.data.kidsInfo[0];
+      const selectedSuggestions = this.data.selectedSuggestions;
+      const suggestionsText = selectedSuggestions.map(s => `${s.title}: ${s.description}`).join('\n');
+      
+      const prompt = `请为以下研学活动生成详细的研学方案：
+
+研学信息：
+- 孩子年龄：${kidsInfo.age}岁
+- 性别：${kidsInfo.gender}
+- 研学场所：${this.data.specificVenue}
+- 研学时长：${this.data.duration}
+
+选择的建议：
+${suggestionsText}
+
+请生成JSON格式的研学方案，包含：
+- planTitle: 方案标题
+- steps: 研学步骤数组，每个步骤包含id、title、content
+- studyCards: 研学卡片数组，每个卡片包含title、content
+
+返回格式：
+{
+  "planTitle": "方案标题",
+  "steps": [
+    {"id": 1, "title": "步骤标题", "content": "步骤内容"}
+  ],
+  "studyCards": [
+    {"title": "卡片标题", "content": "卡片内容"}
+  ]
+}
+
+请确保内容适合${kidsInfo.age}岁的孩子，步骤清晰易懂。`;
+
+      // 调用AI3接口
+      wx.request({
+        url: `${that.data.serverUrl}/3`,
+        method: 'POST',
+        data: {
+          text: prompt,
+          key: that.data.accessKey,
+          stream: false
+        },
+        header: {
+          'Content-Type': 'application/json',
+          'X-Access-Key': that.data.accessKey
+        },
+        success: function(res) {
+          console.log('AI3方案生成成功:', res);
+          if (res.statusCode === 200) {
+            try {
+              let planData = null;
+              let responseContent = '';
+              
+              // 处理响应数据
+              if (res.data && res.data.content) {
+                responseContent = res.data.content;
+              } else if (res.data && typeof res.data === 'string') {
+                responseContent = res.data;
+              }
+              
+              // 尝试解析JSON
+              try {
+                const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  planData = JSON.parse(jsonMatch[0]);
+                }
+              } catch (parseError) {
+                console.log('JSON解析失败，使用文本解析:', parseError);
+                planData = that.parseTextPlan(responseContent);
+              }
+              
+              // 如果解析失败，使用默认方案
+              if (!planData) {
+                planData = that.getDefaultStudyPlan();
+              }
+              
+              that.setData({
+                planTitle: planData.planTitle || '研学方案',
+                steps: planData.steps || [],
+                studyCards: planData.studyCards || []
+              });
+              
+              resolve(planData);
+              
+            } catch (error) {
+              console.error('处理方案数据失败:', error);
+              const defaultPlan = that.getDefaultStudyPlan();
+        that.setData({
+                planTitle: defaultPlan.planTitle,
+                steps: defaultPlan.steps,
+                studyCards: defaultPlan.studyCards
+              });
+              resolve(defaultPlan);
+            }
+          } else {
+            console.error('AI3服务返回错误:', res.statusCode);
+            const defaultPlan = that.getDefaultStudyPlan();
+            that.setData({
+              planTitle: defaultPlan.planTitle,
+              steps: defaultPlan.steps,
+              studyCards: defaultPlan.studyCards
+            });
+            reject(err);
+          }
+        },
+        fail: function(err) {
+          console.error('AI3方案生成失败:', err);
+          const defaultPlan = that.getDefaultStudyPlan();
+          that.setData({
+            planTitle: defaultPlan.planTitle,
+            steps: defaultPlan.steps,
+            studyCards: defaultPlan.studyCards
+          });
+          reject(err);
+        }
+      });
+    });
   },
   
-  // 生成研学计划(使用第三个AI)
-  generateStudyPlan: function() {
-    const that = this;
+  // 新增：获取默认导读故事
+  getDefaultGuideStory: function() {
+    const venue = this.data.specificVenue;
+    return `欢迎来到${venue}！这里有着悠久的历史和丰富的文化内涵。在这次研学之旅中，我们将一起探索这里的奥秘，发现历史的足迹，感受文化的魅力。让我们带着好奇心和求知欲，开始这段精彩的学习之旅吧！`;
+  },
+  
+  // 新增：解析文本格式的研学方案
+  parseTextPlan: function(text) {
+    const lines = text.split('\n').filter(line => line.trim());
+    const plan = {
+      planTitle: `${this.data.specificVenue}研学方案`,
+      steps: [],
+      studyCards: []
+    };
     
-    // 显示加载状态
-    wx.showLoading({
-      title: '生成研学计划中...',
-      mask: true // 添加遮罩防止用户触摸屏幕
-    });
+    let currentSection = '';
+    let stepCounter = 1;
     
-    // 使用所有选择的建议
-    const selectedSuggestions = that.data.selectedSuggestions;
-    if (selectedSuggestions.length === 0) {
-      wx.hideLoading();
+    for (let line of lines) {
+      line = line.trim();
+      
+      // 检测标题
+      if (line.includes('方案') || line.includes('计划')) {
+        plan.planTitle = line;
+      }
+      // 检测步骤
+      else if (/^\d+[\.、]/.test(line) || /^[一二三四五六七八九十][、.]/.test(line)) {
+        const title = line.replace(/^\d+[\.、]/, '').replace(/^[一二三四五六七八九十][、.]/, '').trim();
+        plan.steps.push({
+          id: stepCounter++,
+          title: title,
+          content: '详细内容请参考具体安排'
+        });
+      }
+      // 检测卡片内容
+      else if (line.length > 15 && !line.includes('：') && plan.studyCards.length < 3) {
+        plan.studyCards.push({
+          title: `学习要点${plan.studyCards.length + 1}`,
+          content: line
+        });
+      }
+    }
+    
+    return plan;
+  },
+  
+  // 新增：获取默认研学方案
+  getDefaultStudyPlan: function() {
+    const venue = this.data.specificVenue;
+    const age = this.data.kidsInfo[0].age;
+    
+    return {
+      planTitle: `${venue}研学方案`,
+      steps: [
+        {id: 1, title: "入场准备", content: "了解参观规则，准备学习用品"},
+        {id: 2, title: "主要参观", content: "按照路线参观主要展区"},
+        {id: 3, title: "互动体验", content: "参与互动项目，加深理解"},
+        {id: 4, title: "总结分享", content: "分享学习心得和感受"}
+      ],
+      studyCards: [
+        {title: "观察技巧", content: "仔细观察展品的细节特征"},
+        {title: "记录方法", content: "用文字或图画记录重要发现"},
+        {title: "思考问题", content: "思考展品背后的历史故事"}
+      ]
+    };
+  },
+  
+  // 新增：查看建议详情
+  viewSuggestionDetail: function(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    if (isNaN(index) || index < 0 || index >= this.data.suggestions.length) {
+      return;
+    }
+    
+    const suggestion = this.data.suggestions[index];
+      this.setData({
+      currentSuggestion: suggestion,
+      currentSuggestionIndex: index,
+      showDetailModal: true
+      });
+  },
+    
+  // 新增：关闭详情弹窗
+  closeDetailModal: function() {
+      this.setData({
+      showDetailModal: false,
+        currentSuggestion: null
+      });
+  },
+  
+  // 新增：查看导读材料
+  viewGuideStory: function() {
+    if (!this.data.guideStory) {
       wx.showToast({
-        title: '请至少选择一个研学建议',
+        title: '导读材料还未生成',
         icon: 'none'
       });
       return;
     }
-
-    // 确保只包含用户实际选择的建议，且编号从1开始连续
-    const suggestionsText = selectedSuggestions.map((suggestion, index) => {
-      return `研学建议${index+1}：
-      主题：${suggestion.title || ''}
-      描述：${suggestion.description || ''}
-      学习目标：${suggestion.learningGoals || ''}`;
-    }).join('\n\n');
-
-    const kidsInfo = that.data.kidsInfo.map(kid => 
-      `孩子${kid.id}：${kid.gender || '未知'}性别，${kid.age || '未知'}岁`
-    ).join('；');
     
-    // 设置超时定时器，提示用户
-    const planTimeoutId = setTimeout(() => {
-      wx.showToast({
-        title: '研学计划生成中，请耐心等待',
-        icon: 'none',
-        duration: 3000
+    wx.showModal({
+      title: '导读材料',
+      content: this.data.guideStory,
+      showCancel: false,
+      confirmText: '知道了',
+      confirmColor: '#E6A23C'
+    });
+  },
+  
+  // 新增：查看研学方案
+  viewStudyPlan: function() {
+      this.setData({
+      currentStep: 2,
+      stepsEnabled: true
       });
-    }, 30000); // 30秒后提示
+      this.updatePageTitle();
+  },
+  
+  // 占位方法 - 后续补充完整功能
+  updatePageTitle: function() {
+    const titles = {
+      1: "研学前",
+      2: "研学中", 
+      3: "研学后"
+    };
+    this.setData({
+      pageTitle: titles[this.data.currentStep] || "亲子研学流程"
+    });
+  },
+  
+  loadCachedData: function() {
+    // 占位方法
+  },
+  
+  createAudioIcons: function() {
+    // 占位方法
+  },
+  
+  generateSuggestion: function() {
+    const that = this;
     
-    // 设计 JSON 输出格式的提示词，只返回 JSON 格式
-    const promptText = `请根据以下信息生成研学计划，并仅以 JSON 格式返回，格式示例如下：
+    // 构建AI1的提示词
+    const kidsInfo = this.data.kidsInfo[0];
+    const prompt = `请为以下研学需求生成3-4个个性化的分析建议：
+
+孩子信息：
+- 年龄：${kidsInfo.age}岁
+- 性别：${kidsInfo.gender}
+- 研学场所：${this.data.specificVenue}
+- 研学时长：${this.data.duration}
+
+请生成JSON格式的建议列表，每个建议包含：
+- title: 建议标题
+- description: 详细描述
+- ageRange: 适合年龄范围
+- learningGoals: 学习目标
+
+返回格式：
 {
-  "planTitle": "研学计划标题",
-  "steps": [
-    {"title": "步骤1", "content": "步骤1内容"}
-  ],
-  "studyCards": [
-    {"title": "研学卡片1", "content": "卡片内容"}
+  "suggestions": [
+    {
+      "title": "建议标题",
+      "description": "详细描述",
+      "ageRange": "年龄范围",
+      "learningGoals": "学习目标"
+    }
   ]
-}
-      目的地类型：${that.data.venueType}
-      具体场所：${that.data.specificVenue}
-      时长：${that.data.duration}
-      参与者：${kidsInfo}
-用户选择的研学建议：${suggestionsText}
-指导故事：${that.data.guideStory}`;
-  
-    console.log('向第三个AI服务发送请求，生成研学计划');
-    console.log('AI3请求内容：', promptText);
-    
-    // 发送请求到第三个AI
-    that.requestAIStream('3', promptText, 
-      null, // 不需要处理数据块
-      function(finalText) {
-        // 清除超时定时器
-        clearTimeout(planTimeoutId);
-        
-        wx.hideLoading();
-        console.log('计划生成完成, 长度:', finalText.length);
-        
-        // 使用handlePlainTextPlan函数处理返回的文本
-        that.handlePlainTextPlan(finalText);
+}`;
+
+    // 调用AI1接口
+    wx.request({
+      url: `${this.data.serverUrl}/1`,
+      method: 'POST',
+      data: {
+        text: prompt,
+        key: this.data.accessKey,
+        stream: false
+      },
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': this.data.accessKey
+      },
+      success: function(res) {
+        console.log('AI1建议生成成功:', res);
+        if (res.statusCode === 200) {
+          try {
+            let suggestions = [];
+            let responseContent = '';
+            
+            // 处理响应数据
+            if (res.data && res.data.content) {
+              responseContent = res.data.content;
+            } else if (res.data && typeof res.data === 'string') {
+              responseContent = res.data;
+            }
+            
+            // 尝试解析JSON
+            try {
+              const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsedData = JSON.parse(jsonMatch[0]);
+                if (parsedData.suggestions && Array.isArray(parsedData.suggestions)) {
+                  suggestions = parsedData.suggestions.map((item, index) => ({
+                    id: index + 1,
+                    title: item.title || `建议${index + 1}`,
+                    description: item.description || '暂无描述',
+                    ageRange: item.ageRange || `${kidsInfo.age}岁适合`,
+                    learningGoals: item.learningGoals || '提升综合能力',
+                    isSelected: false
+                  }));
+                }
+              }
+            } catch (parseError) {
+              console.log('JSON解析失败，使用文本解析:', parseError);
+              // 如果JSON解析失败，尝试文本解析
+              suggestions = that.parseTextSuggestions(responseContent, kidsInfo.age);
+            }
+            
+            // 如果仍然没有建议，使用默认建议
+            if (suggestions.length === 0) {
+              suggestions = that.getDefaultSuggestions(kidsInfo.age);
+            }
+            
+                  that.setData({
+              suggestions: suggestions,
+              isLoadingSuggestions: false
+          });
+            
+          } catch (error) {
+            console.error('处理建议数据失败:', error);
+          that.setData({
+              suggestions: that.getDefaultSuggestions(kidsInfo.age),
+              isLoadingSuggestions: false
+            });
+          }
+        } else {
+          that.handleSuggestionError('AI1服务返回错误');
+        }
+      },
+      fail: function(err) {
+        console.error('AI1建议生成失败:', err);
+        that.handleSuggestionError('网络请求失败');
       }
-    );
+    });
   },
   
-  // 提取计划数据的方法
-  extractPlanData: function(text) {
-    // 删除整个函数
+  // 新增：解析文本格式的建议
+  parseTextSuggestions: function(text, age) {
+    const suggestions = [];
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    let currentSuggestion = null;
+    for (let line of lines) {
+      line = line.trim();
+      
+      // 检测标题行（通常包含数字或特殊标记）
+      if (/^\d+[\.、]/.test(line) || /^[一二三四五六七八九十][、.]/.test(line)) {
+        if (currentSuggestion) {
+          suggestions.push(currentSuggestion);
+        }
+        currentSuggestion = {
+          id: suggestions.length + 1,
+          title: line.replace(/^\d+[\.、]/, '').replace(/^[一二三四五六七八九十][、.]/, '').trim(),
+          description: '',
+          ageRange: `${age}岁适合`,
+          learningGoals: '提升综合能力',
+          isSelected: false
+        };
+      } else if (currentSuggestion && line.length > 10) {
+        // 将较长的行作为描述
+        if (!currentSuggestion.description) {
+          currentSuggestion.description = line;
+      } else {
+          currentSuggestion.description += ' ' + line;
+        }
+      }
+    }
+    
+    if (currentSuggestion) {
+      suggestions.push(currentSuggestion);
+    }
+    
+    return suggestions.slice(0, 4); // 最多返回4个建议
   },
   
-  // 添加一个空的兼容方法，防止之前的代码调用出错
-  updatePlanWithData: function(parsedData, suggestedTitle) {
-    // 删除整个函数
+  // 新增：获取默认建议
+  getDefaultSuggestions: function(age) {
+    return [
+      {
+        id: 1,
+        title: "历史文化探索",
+        description: "深入了解场所的历史文化背景，培养历史意识",
+        ageRange: `${age}岁适合`,
+        learningGoals: "培养历史意识和文化认知",
+        isSelected: false
+      },
+      {
+        id: 2,
+        title: "互动体验学习",
+        description: "通过互动体验的方式，增强学习的趣味性",
+        ageRange: `${age}岁适合`,
+        learningGoals: "提升学习兴趣和参与度",
+        isSelected: false
+      },
+      {
+        id: 3,
+        title: "观察记录活动",
+        description: "培养观察能力，记录学习过程和感受",
+        ageRange: `${age}岁适合`,
+        learningGoals: "提升观察力和表达能力",
+        isSelected: false
+      }
+    ];
   },
   
-  // 研学后相关函数
+  // 新增：处理建议生成错误
+  handleSuggestionError: function(errorMsg) {
+    console.error('建议生成错误:', errorMsg);
+    this.setData({
+      suggestions: this.getDefaultSuggestions(this.data.kidsInfo[0].age),
+      isLoadingSuggestions: false
+    });
+    
+    wx.showToast({
+      title: '使用默认建议',
+      icon: 'none'
+    });
+  },
+  
+  toggleSelectSuggestion: function(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    const suggestions = [...this.data.suggestions];
+    suggestions[index].isSelected = !suggestions[index].isSelected;
+    
+    const selectedSuggestions = suggestions.filter(item => item.isSelected);
+    
+    this.setData({
+      suggestions: suggestions,
+      selectedSuggestions: selectedSuggestions
+    });
+  },
+  
+  togglePlayAudio: function(e) {
+    const audioId = e.currentTarget.dataset.id;
+    const audioText = e.currentTarget.dataset.text;
+    const that = this;
+    
+    console.log('音频播放请求:', {audioId, audioText});
+    
+    // 如果当前正在播放同一个音频，则停止播放
+    if (this.data.isPlayingAudio && this.data.currentPlayingId === audioId) {
+      this.stopAudio();
+      return;
+    }
+    
+    // 如果正在播放其他音频，先停止
+    if (this.data.isPlayingAudio) {
+      this.stopAudio();
+    }
+    
+    // 开始播放新音频
+      this.setData({
+      isPlayingAudio: true,
+      currentPlayingId: audioId,
+      playingText: audioText
+    });
+    
+    // 调用语音合成接口
+    wx.request({
+      url: `${this.data.serverUrl}/spk/1`,
+      method: 'POST',
+      data: {
+        text: audioText,
+        key: this.data.accessKey
+      },
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': this.data.accessKey
+      },
+      responseType: 'arraybuffer',
+      success: function(res) {
+        console.log('语音合成成功:', res.statusCode);
+        if (res.statusCode === 200) {
+          // 将音频数据转换为临时文件
+          const fs = wx.getFileSystemManager();
+          const tempFilePath = `${wx.env.USER_DATA_PATH}/temp_audio_${Date.now()}.mp3`;
+          
+          fs.writeFile({
+            filePath: tempFilePath,
+            data: res.data,
+            success: function() {
+              console.log('音频文件写入成功:', tempFilePath);
+              
+              // 创建音频上下文并播放
+              that.createAudioContext();
+              that.data.audioContext.src = tempFilePath;
+              that.data.audioContext.play();
+              
+              // 监听播放结束
+              that.data.audioContext.onEnded(() => {
+                console.log('音频播放结束');
+                that.setData({
+                  isPlayingAudio: false,
+                  currentPlayingId: '',
+                  playingText: ''
+                });
+                
+                // 清理临时文件
+                fs.unlink({
+                  filePath: tempFilePath,
+                  success: () => console.log('临时音频文件已清理'),
+                  fail: (err) => console.log('清理临时文件失败:', err)
+                });
+              });
+              
+              // 监听播放错误
+              that.data.audioContext.onError((err) => {
+                console.error('音频播放错误:', err);
+                that.setData({
+                  isPlayingAudio: false,
+                  currentPlayingId: '',
+                  playingText: ''
+                });
+      wx.showToast({
+                  title: '音频播放失败',
+        icon: 'none'
+      });
+                
+                // 清理临时文件
+                fs.unlink({
+                  filePath: tempFilePath,
+                  success: () => console.log('临时音频文件已清理'),
+                  fail: (err) => console.log('清理临时文件失败:', err)
+                });
+              });
+            },
+            fail: function(err) {
+              console.error('音频文件写入失败:', err);
+              that.setData({
+                isPlayingAudio: false,
+                currentPlayingId: '',
+                playingText: ''
+              });
+      wx.showToast({
+                title: '音频处理失败',
+        icon: 'none'
+      });
+            }
+          });
+        } else {
+          that.handleAudioError('语音合成服务返回错误');
+        }
+      },
+      fail: function(err) {
+        console.error('语音合成请求失败:', err);
+        that.handleAudioError('网络请求失败');
+      }
+    });
+  },
+  
+  // 新增：创建音频上下文
+  createAudioContext: function() {
+    if (!this.data.audioContext) {
+      this.setData({
+        audioContext: wx.createInnerAudioContext()
+      });
+    }
+  },
+  
+  // 新增：停止音频播放
+  stopAudio: function() {
+    if (this.data.audioContext) {
+      this.data.audioContext.stop();
+    }
+    this.setData({
+      isPlayingAudio: false,
+      currentPlayingId: '',
+      playingText: ''
+    });
+  },
+  
+  // 新增：处理音频错误
+  handleAudioError: function(errorMsg) {
+    console.error('音频播放错误:', errorMsg);
+    this.setData({
+      isPlayingAudio: false,
+      currentPlayingId: '',
+      playingText: ''
+    });
+      wx.showToast({
+      title: '语音播放失败',
+        icon: 'none'
+      });
+  },
+  
+  // 完善：创建音频图标
+  createAudioIcons: function() {
+    // 初始化音频相关资源
+      this.setData({
+      playIconPath: "/images/1.png",
+      pauseIconPath: "/images/2.png"
+    });
+  },
+  
+  switchToStep: function(e) {
+    const step = parseInt(e.currentTarget.dataset.step);
+    if (step === 2 && !this.data.stepsEnabled) {
+      wx.showToast({
+        title: '请先完成研学前准备',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    this.setData({
+      currentStep: step
+    });
+    this.updatePageTitle();
+  },
+  
+  completeStudy: function() {
+    // 检查所有必要内容是否已生成
+    if (!this.data.guideStory) {
+      wx.showToast({
+        title: '导读材料还未生成完成',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    if (!this.data.planTitle) {
+      wx.showToast({
+        title: '研学方案还未生成完成',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    if (!this.data.studyCards || this.data.studyCards.length === 0) {
+      wx.showToast({
+        title: '研学卡片还未生成完成',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 所有内容都已生成，可以进入下一步
+    this.setData({
+      currentStep: 3
+    });
+    this.updatePageTitle();
+  },
+  
   chooseImage: function() {
     const that = this;
     wx.chooseImage({
@@ -1018,1073 +1862,534 @@ Page({
   },
   
   onTextInput: function(e) {
-    this.setData({
+      this.setData({
       reflectionText: e.detail.value
     });
   },
   
   shareResults: function() {
-    if (!this.data.tempFilePaths.length && !this.data.reflectionText) {
-      wx.showToast({
-        title: '请添加图片或文字内容',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    this.saveCurrentStepData();
-    
-    // 准备要保存的研学成果数据
-    const newStudyResult = {
-      id: Date.now().toString(), // 使用时间戳作为唯一ID
-      title: this.data.planTitle || '研学成果',
-      date: new Date().toLocaleDateString(),
-      imagePath: this.data.tempFilePaths.length > 0 ? this.data.tempFilePaths[0] : '',
-      reflection: this.data.reflectionText || '无心得体会'
-    };
-    
-    try {
-      // 从本地存储中读取现有研学成果
-      const studyResultsStorage = wx.getStorageSync('study_results');
-      let studyResults = [];
-      
-      if (studyResultsStorage) {
-        studyResults = JSON.parse(studyResultsStorage);
-      }
-      
-      // 添加新的研学成果
-      studyResults.push(newStudyResult);
-      
-      // 更新本地存储
-      wx.setStorageSync('study_results', JSON.stringify(studyResults));
-      
-      wx.showToast({
-        title: '保存成功',
-        icon: 'success',
-        duration: 2000,
-        success: function() {
-          // 保存成功后跳转到研学空间页面
-          setTimeout(function() {
-            wx.navigateTo({
-              url: '/pages/share/share'
-            });
-          }, 2000);
-        }
-      });
-    } catch (error) {
-      console.error('保存研学成果失败：', error);
-      wx.showToast({
-        title: '保存失败',
-        icon: 'none'
-      });
-    }
-  },
-  
-  viewDetails: function() {
-    const that = this;
-    
-    // 组织要传递的数据
-    try {
-      // 步骤详情
-      const planDetails = {
-        title: that.data.planTitle,
-        venue: that.data.specificVenue,
-        duration: that.data.duration,
-        steps: that.data.steps,
-        studyCards: that.data.studyCards
-      };
-      
-      // 将数据存储到本地缓存中
-      wx.setStorageSync('studyPlanDetails', planDetails);
-      
-      // 导航到详情页面
-      wx.navigateTo({
-        url: '/pages/studyDetail/studyDetail'
-      });
-    } catch (error) {
-      console.error('保存研学详情数据失败:', error);
-      wx.showToast({
-        title: '加载详情失败',
-        icon: 'none'
-      });
-    }
-  },
-  
-  goBack: function() {
-    // 如果是研学前的预研学指导故事页，切回建议列表页
-    if (this.data.currentStep === 1 && this.data.subStep === 'guideStory') {
-      this.setData({
-        subStep: 'suggestions'
-      });
-      this.updatePageTitle();
-      return;
-    }
-    
-    // 如果是研学前的建议详情页，切回建议列表页
-    if (this.data.currentStep === 1 && this.data.subStep === 'suggestionDetail') {
-      this.setData({
-        subStep: 'suggestions',
-        currentSuggestion: null
-      });
-      this.updatePageTitle();
-      return;
-    }
-    
-    // 如果是研学前的建议列表页，切回信息填写页
-    if (this.data.currentStep === 1 && this.data.subStep === 'suggestions') {
-      this.setData({
-        subStep: 'info'
-      });
-      this.updatePageTitle();
-      return;
-    }
-    
-    // 否则回到上一步
-    const prevStep = this.data.currentStep - 1;
-    if (prevStep >= 1) {
-      this.saveCurrentStepData();
-      
-      // 关键修改：设置返回按钮状态
-      // 只有当返回到首页(研学前)且是通过初始加载进入时才隐藏返回按钮
-      const hideBackButton = prevStep === 1 && !this.data.fromOtherStep;
-      
-      this.setData({
-        currentStep: prevStep,
-        subStep: prevStep === 1 ? (this.data.suggestions.length > 0 ? 'suggestions' : 'info') : '',
-        showBackIcon: !hideBackButton
-      });
-      this.updatePageTitle();
-    } else {
-      wx.navigateBack();
-    }
-  },
-  
-  // 添加一个函数，从研学中到研学后
-  completeStudy: function() {
-    this.saveCurrentStepData();
-    this.setData({
-      currentStep: 3,
-      showBackIcon: true
-    });
-    this.updatePageTitle();
-  },
-  
-  // 删除孩子信息
-  deleteKid: function(e) {
-    const index = e.currentTarget.dataset.index;
-    let kidsInfo = this.data.kidsInfo;
-    
-    // 确保至少保留一个孩子
-    if (kidsInfo.length > 1) {
-      kidsInfo.splice(index, 1);
-      
-      // 重新分配ID
-      for (let i = 0; i < kidsInfo.length; i++) {
-        kidsInfo[i].id = i + 1;
-      }
-      
-      this.setData({
-        kidsInfo: kidsInfo
-      });
-    }
-  },
-  
-  // 流式请求AI服务
-  requestAIStream: function(serviceId, text, processChunk, onComplete) {
-    const that = this;
-    const serviceUrl = `http://119.3.217.132:5000/${serviceId}`;
-    
-    console.log(`向AI服务${serviceId}发送请求, URL:`, serviceUrl);
-    
-    // 设置请求参数
-    const requestData = {
-      text: text,
-      key: 'hjl2004',
-      stream: false
-    };
-    
-    // 显示加载提示
-    wx.showLoading({
-      title: '正在思考中...',
-      mask: true
-    });
-    
-    // 设置状态为加载中
-    this.setData({
-      isLoadingMore: true
-    });
-    
-    // 发送普通请求
-    wx.request({
-      url: serviceUrl,
-      method: 'POST',
-      data: requestData,
-      header: {
-        'Content-Type': 'application/json',
-        'X-Access-Key': 'hjl2004',
-        'X-Stream': 'false'
-      },
-      timeout: 120000, // 增加超时时间到120秒
-      success: function(res) {
-        console.log('请求成功状态:', res.statusCode);
-        wx.hideLoading();
-        
-        if (res.statusCode !== 200) {
-          console.error('请求失败，状态码:', res.statusCode);
         wx.showToast({
-            title: `请求失败: ${res.statusCode}`,
-          icon: 'none'
-        });
-          that.setData({ isLoadingMore: false });
-          if (onComplete) onComplete(`请求失败: ${res.statusCode}`);
-          return;
-        }
-        
-        const responseData = res.data;
-        
-        if (responseData.error) {
-          console.error('AI服务返回错误:', responseData.error);
-          wx.showToast({
-            title: responseData.error,
-            icon: 'none'
-          });
-          that.setData({ isLoadingMore: false });
-          if (onComplete) onComplete(responseData.error);
-          return;
-        }
-        
-        // 直接使用content
-        const content = responseData.content;
-        if (!content) {
-          wx.showToast({
-            title: '获取AI回复失败',
-            icon: 'none'
-          });
-          that.setData({ isLoadingMore: false });
-          if (onComplete) onComplete("获取AI回复失败");
-                return;
-              }
-              
-        console.log(`AI${serviceId}返回内容开头:`, content.substring(0, 100) + '...');
-        if (serviceId === '1') {
-          console.log('AI1完整返回:', content);
-        }
-        
-        // 根据不同服务ID处理内容
-        if (serviceId === '1') {
-          // 研学前 - 处理建议
-          that.handlePlainTextSuggestions(content);
-                  that.setData({
-            isLoadingMore: false,
-            showSuggestionsTab: true,
-            subStep: 'suggestions'
-          });
-        } else if (serviceId === '2') {
-          // 处理指导故事
-          that.setData({
-            guideStory: content,
-                    isLoadingMore: false
-                  });
-          try {
-            wx.setStorageSync('studyProcess_1_guideStory', {
-              guideStory: content
-            });
-                  } catch (e) {
-            console.error('保存指导故事失败:', e);
-          }
-        } else if (serviceId === '3') {
-          // 处理研学计划
-          that.handlePlainTextPlan(content);
-          that.setData({ isLoadingMore: false });
-        }
-        
-        if (onComplete) onComplete(content);
-      },
-      fail: function(err) {
-        wx.hideLoading();
-        console.error('AI请求失败:', err);
-        wx.showToast({
-          title: '请求超时或网络异常，请稍后重试',
-          icon: 'none',
-          duration: 3000
-        });
-        that.setData({ isLoadingMore: false });
-        if (onComplete) onComplete("AI服务请求失败");
-      },
-      complete: function() {
-        wx.hideLoading();
-        that.setData({ isLoadingMore: false });
-      }
-    });
-  },
-  
-  // 优化updatePlainTextSuggestions函数
-  updatePlainTextSuggestions: function(text) {
-    if (!text || text.trim().length < 30) return; // 确保有足够的文本
-    
-    console.log('正在从纯文本更新建议，长度:', text.length);
-    
-    // 尝试查找主题和描述
-    const lines = text.split('\n');
-    let currentSuggestions = [];
-    let currentId = null;
-    let currentTheme = null;
-    let currentDesc = '';
-    let currentAgeRange = '6-12岁';
-    let currentGoals = '培养观察力，增强探索精神，提升动手能力';
-    let currentProcess = '';
-    let currentThinking = '';
-    
-    // 标记当前正在处理哪个部分
-    let processingSection = 'desc'; // 可能的值: desc, age, goals, process, thinking
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      // 跳过空行
-      if (!line) continue;
-      
-      // 先查找是否包含数字序号，表示新的主题开始
-      // 匹配 "1. 【主题】" 或 "1.【主题】" 或 "主题1："等格式
-      const themeMatch = line.match(/^(\d+)[\.\、]?\s*【([^】]+)】/) || 
-                          line.match(/^(\d+)[\.\、]?\s*\[\s*([^\]]+)\s*\]/) || 
-                          line.match(/^主题\s*(\d+)\s*[:：]\s*.+/) ||
-                          line.match(/^建议\s*(\d+)\s*[:：]\s*.+/) ||
-                          line.match(/^(\d+)\.\s*([^：:]+)[：:]\s*([^\n]+)/);
-      
-      if (themeMatch) {
-        // 如果有之前的主题，保存它
-        if (currentTheme) {
-          currentSuggestions.push({
-            id: currentId || currentSuggestions.length + 1,
-            title: currentTheme,
-            description: currentDesc,
-            ageRange: currentAgeRange,
-            learningGoals: currentGoals,
-            isSelected: false,
-            wanfaLiucheng: currentProcess,
-            gaojieThinking: currentThinking
-          });
-        }
-        
-        // 开始新主题
-        currentId = parseInt(themeMatch[1]) || currentSuggestions.length + 1;
-        currentTheme = themeMatch[2] || line.replace(/^\d+[\.\、]?\s*/, '');
-        currentDesc = '';
-        currentAgeRange = '6-12岁';
-        currentGoals = '培养观察力，增强探索精神，提升动手能力';
-        currentProcess = '';
-        currentThinking = '';
-        processingSection = 'desc';
-        
-        // 提取当前行中可能的描述部分
-        const remainingText = line.replace(/^(\d+)[\.\、]?\s*【[^】]+】/, '')
-                                 .replace(/^(\d+)[\.\、]?\s*\[\s*[^\]]+\s*\]/, '')
-                                 .replace(/^主题\s*(\d+)\s*[:：]\s*.+/, '')
-                                 .replace(/^建议\s*(\d+)\s*[:：]\s*.+/, '').trim();
-        if (remainingText) {
-          currentDesc = remainingText;
-        }
-      } else {
-        // 检查是否是各个部分的标记行
-        if (line.includes('年龄') || line.includes('适合') || line.includes('推荐阶段')) {
-          processingSection = 'age';
-          const ageMatch = line.match(/(\d+\s*-\s*\d+\s*岁)/) || 
-                            line.match(/(\d+\s*岁以上)/) || 
-                            line.match(/(\d+\s*岁以下)/);
-          if (ageMatch) {
-            currentAgeRange = ageMatch[1];
-          }
-          continue;
-        } else if (line.includes('学习目标') || line.includes('能力目标') || line.includes('核心能力')) {
-          processingSection = 'goals';
-          const goalContent = line.split(/[:：]/)[1];
-          if (goalContent) {
-            currentGoals = goalContent.trim();
-          }
-          continue;
-        } else if (line.includes('玩法流程') || line.includes('任务') || line.includes('活动流程')) {
-          processingSection = 'process';
-          const processContent = line.split(/[:：]/)[1];
-          if (processContent) {
-            currentProcess = processContent.trim();
-          }
-          continue;
-        } else if (line.includes('高阶思维') || line.includes('高阶提示')) {
-          processingSection = 'thinking';
-          const thinkingContent = line.split(/[:：]/)[1];
-          if (thinkingContent) {
-            currentThinking = thinkingContent.trim();
-          }
-          continue;
-        }
-        
-        // 根据当前处理的部分添加内容
-        switch(processingSection) {
-          case 'desc':
-            if (currentDesc) currentDesc += ' ';
-            currentDesc += line;
-            break;
-          case 'age':
-            const ageMatch = line.match(/(\d+\s*-\s*\d+\s*岁)/) || 
-                              line.match(/(\d+\s*岁以上)/) || 
-                              line.match(/(\d+\s*岁以下)/);
-            if (ageMatch) {
-              currentAgeRange = ageMatch[1];
-            }
-            break;
-          case 'goals':
-            if (currentGoals) currentGoals += ' ';
-            currentGoals += line;
-            break;
-          case 'process':
-            if (currentProcess) currentProcess += ' ';
-            currentProcess += line;
-            break;
-          case 'thinking':
-            if (currentThinking) currentThinking += ' ';
-            currentThinking += line;
-            break;
-        }
-        
-        // 没有明确的部分标识，但发现了主题标记，可能是内嵌在内容中
-        if (!currentTheme && (line.includes('【') || line.includes('['))) {
-          const titleMatch = line.match(/【([^】]+)】/) || line.match(/\[\s*([^\]]+)\s*\]/);
-          if (titleMatch) {
-            currentTheme = titleMatch[1];
-            currentDesc = line.replace(/【[^】]+】/, '').replace(/\[\s*[^\]]+\s*\]/, '').trim();
-            processingSection = 'desc';
-          }
-        }
-      }
-    }
-    
-    // 添加最后一个主题（如果有的话）
-    if (currentTheme) {
-      currentSuggestions.push({
-        id: currentId || currentSuggestions.length + 1,
-        title: currentTheme,
-        description: currentDesc,
-        ageRange: currentAgeRange,
-        learningGoals: currentGoals,
-        isSelected: false,
-        wanfaLiucheng: currentProcess,
-        gaojieThinking: currentThinking
-      });
-    }
-    
-    // 如果还是没有建议，尝试查找内容中的【】或[]包围的部分作为主题
-    if (currentSuggestions.length === 0) {
-      const fullText = text.trim();
-      const titleMatches = fullText.match(/【([^】]+)】/g) || fullText.match(/\[\s*([^\]]+)\s*\]/g);
-      
-      if (titleMatches && titleMatches.length > 0) {
-        for (let i = 0; i < Math.min(titleMatches.length, 5); i++) {
-          const titleText = titleMatches[i].replace(/【|】|\[|\]/g, '').trim();
-          let descriptionText = '';
-          
-          // 尝试提取描述，取标题后的一部分文本
-          const titleIndex = fullText.indexOf(titleMatches[i]);
-          if (titleIndex > -1) {
-            const afterTitleText = fullText.substring(titleIndex + titleMatches[i].length);
-            const nextTitleIndex = afterTitleText.search(/【[^】]+】|\[\s*[^\]]+\s*\]/);
-            descriptionText = nextTitleIndex > -1 
-              ? afterTitleText.substring(0, nextTitleIndex).trim() 
-              : afterTitleText.substring(0, 150).trim();
-          }
-          
-          currentSuggestions.push({
-            id: i + 1,
-            title: titleText,
-            description: descriptionText,
-            ageRange: '6-12岁',
-            learningGoals: '培养观察力，增强探索精神，提升动手能力',
-            isSelected: false,
-            wanfaLiucheng: '',
-            gaojieThinking: ''
-          });
-        }
-      }
-    }
-    
-    // 如果经过所有处理仍没有建议，则按段落拆分作为建议
-    if (currentSuggestions.length === 0 && text.length > 100) {
-      const paragraphs = text.split(/\n\s*\n/);
-      for (let i = 0; i < Math.min(paragraphs.length, 5); i++) {
-        if (paragraphs[i] && paragraphs[i].trim().length > 30) {
-          const para = paragraphs[i].trim();
-          let title = `研学主题${i+1}`;
-          
-          // 尝试从段落中提取标题
-          const firstLine = para.split('\n')[0];
-          if (firstLine && firstLine.length < 50) {
-            title = firstLine.trim();
-          }
-          
-          currentSuggestions.push({
-            id: i + 1,
-            title: title,
-            description: para.replace(title, '').substring(0, 150).trim(),
-            ageRange: '6-12岁',
-            learningGoals: '培养观察力，增强探索精神，提升动手能力',
-            isSelected: false,
-            wanfaLiucheng: '',
-            gaojieThinking: ''
-          });
-        }
-      }
-    }
-    
-    // 如果提取到了建议，更新UI
-    if (currentSuggestions.length > 0) {
-      console.log('从纯文本提取到建议数量: ', currentSuggestions.length);
-      
-      // 移除显示加载状态提示
-      // wx.showLoading({
-      //   title: `已提取${currentSuggestions.length}个建议`,
-      // });
-      
-      // 确保标题不为空
-      currentSuggestions = currentSuggestions.map(suggestion => {
-        if (!suggestion.title || suggestion.title.trim().length === 0) {
-          suggestion.title = '研学主题' + suggestion.id;
-        }
-        return suggestion;
-      });
-      
-      this.setData({
-        suggestions: currentSuggestions
-      });
-    }
-  },
-  
-  // 处理完整的纯文本，生成最终建议
-  handlePlainTextSuggestions: function(text) {
-    if (!text || text.trim().length < 50) {
-      // 没有足够的文本，不使用默认建议
-      this.setData({
-        suggestions: [],
-        isLoadingMore: false,
-        showSuggestionsTab: true,
-        subStep: 'suggestions'
-      });
-      
-      wx.showToast({
-        title: '未能获取有效建议',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    console.log('从完整纯文本生成建议');
-    
-    // 一次性提取所有可能的建议
-    let suggestions = extractSuggestionsFromText(text);
-    
-    // 确保所有建议的 isSelected 属性为 false
-    suggestions = suggestions.map(suggestion => ({
-      ...suggestion,
-      isSelected: false
-    }));
-    
-    if (suggestions.length > 0) {
-      console.log('成功提取建议数量:', suggestions.length);
-      this.setData({
-        suggestions: suggestions,
-        selectedSuggestions: [], // 清空已选择的建议
-        isLoadingMore: false,
-        showSuggestionsTab: true,
-        subStep: 'suggestions'
-      });
-      
-      this.updatePageTitle();
-      this.saveCurrentStepData();
-    } else {
-      // 如果提取失败，仍然不使用默认建议
-      this.setData({
-        suggestions: [],
-        selectedSuggestions: [], // 清空已选择的建议
-        isLoadingMore: false,
-        showSuggestionsTab: true,
-        subStep: 'suggestions'
-      });
-      
-      wx.showToast({
-        title: '解析建议失败',
-        icon: 'none'
-      });
-    }
-  },
-  
-  // 添加验证基本信息的方法
-  validateBasicInfo: function() {
-    // 验证孩子信息
-    if (this.data.kidsInfo.length === 0) {
-      wx.showToast({
-        title: '请添加至少一个孩子信息',
-        icon: 'none'
-      });
-      return false;
-    }
-    
-    // 验证每个孩子的信息是否完整
-    for (let i = 0; i < this.data.kidsInfo.length; i++) {
-      const kid = this.data.kidsInfo[i];
-      if (!kid.gender || !kid.age) {
-        wx.showToast({
-          title: `请完善孩子${kid.id}的信息`,
-          icon: 'none'
-        });
-        return false;
-      }
-    }
-    
-    // 验证目的地信息
-    if (!this.data.venueType) {
-      wx.showToast({
-        title: '请选择场景类型',
-        icon: 'none'
-      });
-      return false;
-    }
-    
-    if (!this.data.specificVenue) {
-      wx.showToast({
-        title: '请选择具体场所',
-        icon: 'none'
-      });
-      return false;
-    }
-    
-    // 验证时长
-    if (!this.data.duration) {
-      wx.showToast({
-        title: '请选择游览时长',
-        icon: 'none'
-      });
-      return false;
-    }
-    
-    return true;
-  },
-  
-  // 处理纯文本形式的研学计划
-  handlePlainTextPlan: function(text) {
-    // 使用 JSON 格式解析研学计划
-    let data = {};
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error('解析研学计划 JSON 失败，使用原始文本回退:', e);
-      wx.showToast({ title: '解析研学计划失败，已回退到文本模式', icon: 'none' });
-      // 回退：将原始文本作为单步计划展示
-      const fallbackTitle = this.data.specificVenue ? `${this.data.specificVenue}研学计划` : '研学计划';
-      this.setData({
-        planTitle: fallbackTitle,
-        steps: [{ id: 1, title: fallbackTitle, content: text.trim() }],
-        studyCards: [],
-        planGenerated: true,
-        currentStep: 2
-      });
-      this.saveCurrentStepData();
-      this.updatePageTitle();
-      return;
-    }
-    const planTitle = data.planTitle || `${this.data.specificVenue || '研学目的地'}研学计划`;
-    const steps = Array.isArray(data.steps)
-      ? data.steps.map((item, idx) => ({ id: idx + 1, title: item.title || '', content: item.content || item.description || '' }))
-      : [];
-    
-    // 确保研学卡片有正确的结构和样式
-    const studyCards = Array.isArray(data.studyCards)
-      ? data.studyCards.map((item, idx) => ({ 
-          id: idx + 1, 
-          title: item.title || '研学卡片 ' + (idx + 1), 
-          content: item.content || '',
-          // 为卡片随机分配一个颜色，确保样式生效
-          borderColor: this.getCardColor(idx)
-        }))
-      : [];
-    
-    this.setData({
-      planTitle: planTitle,
-      steps: steps,
-      studyCards: studyCards,
-      planGenerated: true,
-      currentStep: 2
-    });
-    
-    // 确保研学卡片容器样式正确
-    setTimeout(() => {
-      // 在DOM渲染完成后，检查研学卡片是否正确渲染
-      this.checkStudyCardsStyle();
-    }, 500);
-    
-    this.saveCurrentStepData();
-    this.updatePageTitle();
-  },
-  
-  // 获取卡片边框颜色
-  getCardColor: function(index) {
-    // 几种不同的颜色
-    const colors = ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#e91e63'];
-    return colors[index % colors.length];
-  },
-  
-  // 检查研学卡片样式渲染
-  checkStudyCardsStyle: function() {
-    console.log('检查研学卡片样式是否正确渲染');
-    // 直接刷新一下数据，触发重新渲染
-    if (this.data.studyCards && this.data.studyCards.length > 0) {
-      const updatedCards = this.data.studyCards.map(card => {
-        if (!card.borderColor) {
-          return {
-            ...card,
-            borderColor: this.getCardColor(card.id - 1)
-          };
-        }
-        return card;
-      });
-      
-      this.setData({
-        studyCards: updatedCards
-      });
-    }
-  },
-  
-  // 处理纯文本形式的反思内容
-  handlePlainTextReflection: function(text) {
-    console.log('处理纯文本反思内容');
-    
-    if (!text || text.trim().length === 0) {
-      wx.showToast({
-        title: '未能生成有效的反思内容',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    // 将AI生成的反思文本保存起来
-    this.setData({
-      reflectionText: text,
-      currentStep: 3  // 自动切换到研学后步骤
-    });
-    
-    // 保存数据
-    this.saveCurrentStepData();
-    this.updatePageTitle();
-    
-    // 显示成功提示
-    wx.showToast({
-      title: '已生成反思内容',
+      title: '保存成功',
       icon: 'success'
     });
   },
   
-  // 辅助函数：将文本分割成指定数量的段落
-  splitTextIntoParagraphs: function(text, count) {
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    const result = [];
-    
-    if (lines.length <= count) {
-      return lines; // 如果行数少于或等于目标段落数，直接返回
-    }
-    
-    const linesPerParagraph = Math.ceil(lines.length / count);
-    
-    for (let i = 0; i < count; i++) {
-      const start = i * linesPerParagraph;
-      const end = Math.min(start + linesPerParagraph, lines.length);
-      if (start < lines.length) {
-        result.push(lines.slice(start, end).join('\n'));
-      }
-    }
-    
-    return result;
+  showInDevelopment: function() {
+      wx.showToast({
+      title: '功能开发中，敬请期待',
+      icon: 'none',
+      duration: 2000
+    });
   },
   
-  // 根据步骤生成默认研学卡片
-  generateDefaultCards: function(steps) {
-    const cards = [];
+  // 新增：生成故事插图
+  generateStoryImage: function(storyContent) {
+    const that = this;
     
-    // 确保至少有一张研学卡片
-    if (steps && steps.length > 0) {
-      // 从每个步骤中提取关键信息
-      for (let i = 0; i < Math.min(steps.length, 3); i++) {
-        const step = steps[i];
-        // 提取步骤描述的前50个字符作为卡片内容
-        const content = step.description.substring(0, 50) + (step.description.length > 50 ? '...' : '');
-        
-        cards.push({
-          title: `研学卡片 ${i + 1}`,
-          content: content
+    // 设置生成状态
+    this.setData({
+      isGeneratingImage: true,
+      imageError: ''
+    });
+    
+    // 从故事内容中提取关键信息作为图像提示
+    const imagePrompt = this.extractImagePrompt(storyContent);
+    
+    console.log('开始生成故事插图，提示词:', imagePrompt);
+    
+    // 调用图像生成接口
+    wx.request({
+      url: `${this.data.serverUrl}/pic/1`,
+      method: 'POST',
+      data: {
+        text: imagePrompt,
+        key: this.data.accessKey
+      },
+      header: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': this.data.accessKey
+      },
+      timeout: 60000, // 图像生成可能需要较长时间
+      success: function(res) {
+        console.log('插图生成响应:', res);
+        if (res.statusCode === 200 && res.data && res.data.url) {
+          that.setData({
+            storyImageUrl: res.data.url,
+            isGeneratingImage: false
+          });
+          console.log('故事插图生成成功:', res.data.url);
+        } else {
+          that.setData({
+            isGeneratingImage: false,
+            imageError: '插图生成失败，请重试'
+          });
+          console.error('插图生成失败:', res);
+        }
+      },
+      fail: function(err) {
+        console.error('插图生成请求失败:', err);
+        that.setData({
+          isGeneratingImage: false,
+          imageError: '网络错误，插图生成失败'
         });
       }
+    });
+  },
+  
+  // 新增：从故事内容提取图像提示词
+  extractImagePrompt: function(storyContent) {
+    const venue = this.data.specificVenue;
+    const age = this.data.kidsInfo[0].age;
+    
+    // 构建基础提示词
+    let prompt = `为${age}岁儿童研学活动创作插图，场景：${venue}`;
+    
+    // 从故事内容中提取关键词
+    const keywords = [];
+    
+    // 检测场所相关关键词
+    if (storyContent.includes('古代') || storyContent.includes('历史')) {
+      keywords.push('古代历史场景');
+    }
+    if (storyContent.includes('皇宫') || storyContent.includes('宫殿')) {
+      keywords.push('宫殿建筑');
+    }
+    if (storyContent.includes('博物馆') || storyContent.includes('展品')) {
+      keywords.push('博物馆展览');
+    }
+    if (storyContent.includes('科技') || storyContent.includes('实验')) {
+      keywords.push('科技展示');
+    }
+    if (storyContent.includes('自然') || storyContent.includes('动物')) {
+      keywords.push('自然动物');
+    }
+    
+    // 添加儿童友好的风格描述
+    keywords.push('卡通风格', '明亮色彩', '儿童友好');
+    
+    if (keywords.length > 0) {
+      prompt += '，包含：' + keywords.join('、');
+    }
+    
+    // 限制长度
+    if (prompt.length > 150) {
+      prompt = prompt.substring(0, 150);
+    }
+    
+    return prompt;
+  },
+  
+  // 新增：重新生成插图
+  regenerateImage: function() {
+    if (this.data.guideStory) {
+      this.generateStoryImageAsync(this.data.guideStory);
     } else {
-      // 如果没有步骤，创建一个默认卡片
-      cards.push({
-        title: '研学卡片 1',
-        content: '记录研学过程中的重要发现和思考'
-      });
-    }
-    
-    return cards;
-  },
-  
-  // 语音播放相关函数
-  
-  // 初始化音频上下文
-  initAudioContext: function() {
-    if (!this.data.audioContext) {
-      const audioContext = wx.createInnerAudioContext();
-      
-      audioContext.onPlay(() => {
-        console.log('音频开始播放');
-      });
-      
-      audioContext.onError((res) => {
-        console.error('音频播放错误:', res);
-        wx.showToast({
-          title: '音频播放失败',
-          icon: 'none'
-        });
-        this.setData({
-          isPlayingAudio: false,
-          currentPlayingId: ''
-        });
-      });
-      
-      audioContext.onEnded(() => {
-        console.log('音频播放结束');
-        this.setData({
-          isPlayingAudio: false,
-          currentPlayingId: ''
-        });
-      });
-      
-      this.setData({
-        audioContext: audioContext
+      wx.showToast({
+        title: '请先生成导读故事',
+        icon: 'none'
       });
     }
   },
   
-  // 播放或暂停文本语音
-  togglePlayAudio: function(e) {
-    // 初始化音频上下文
-    this.initAudioContext();
+  // 新增：预览插图
+  previewImage: function(e) {
+    const imageUrl = e.currentTarget.dataset.url;
+    if (imageUrl) {
+      wx.previewImage({
+        urls: [imageUrl],
+        current: imageUrl
+      });
+    }
+  },
+  
+  // 新增：触发兴趣选择
+  triggerInterestSelection: function() {
+    // 【关键修复】从对话中提取基本信息并设置到data中
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
     
-    const textId = e.currentTarget.dataset.id;
-    const text = e.currentTarget.dataset.text;
+    // 智能提取并设置基本信息
+    const extractedInfo = this.extractInfoWithDefaults(conversationText);
     
-    // 如果已经在播放这段文本，则暂停
-    if (this.data.isPlayingAudio && this.data.currentPlayingId === textId) {
-      this.data.audioContext.pause();
-      this.setData({
-        isPlayingAudio: false,
-        currentPlayingId: ''
+    console.log('🔧 AI4触发时提取的信息:', extractedInfo);
+    
+    // 重要：将提取的信息设置到data中，供AI1使用
+    this.setData({
+      kidsInfo: extractedInfo.kidsInfo,
+      venueType: extractedInfo.venueType,
+      specificVenue: extractedInfo.specificVenue,
+      duration: extractedInfo.duration
+    });
+    
+    // 添加过渡消息
+    const transitionMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `太好了！基本信息已经收集完成：\n\n👶 孩子信息：${extractedInfo.kidsInfo[0].age}岁${extractedInfo.kidsInfo[0].gender}孩\n📍 研学场所：${extractedInfo.specificVenue}\n⏰ 研学时长：${extractedInfo.duration}\n\n接下来，让我了解一下您希望通过这次研学重点培养孩子哪些方面的兴趣。这将帮助我为您制定更精准的研学方案。`
+    };
+    
+    const newMessages = [...this.data.chatMessages, transitionMessage];
+    this.setData({
+      chatMessages: newMessages,
+      showInterestSelection: true,
+      currentInterestStep: 'category',
+      collectionPhase: 'interest'
+    });
+  },
+  
+  // 新增：选择兴趣大类
+  selectInterestCategory: function(e) {
+    const categoryId = e.currentTarget.dataset.categoryId;
+    const selectedCategories = [...this.data.selectedInterestCategories];
+    
+    const index = selectedCategories.indexOf(categoryId);
+    if (index > -1) {
+      selectedCategories.splice(index, 1);
+    } else {
+      selectedCategories.push(categoryId);
+    }
+    
+    this.setData({
+      selectedInterestCategories: selectedCategories
+    });
+  },
+  
+  // 新增：确认大类选择，进入细分选择
+  confirmCategorySelection: function() {
+    // 检查禁用状态，防止重复点击
+    if (this.data.selectedInterestCategories.length === 0) {
+      wx.showToast({
+        title: '请至少选择一个兴趣方向',
+        icon: 'none'
       });
       return;
     }
     
-    // 如果正在播放其他文本，先停止
-    if (this.data.isPlayingAudio) {
-      this.data.audioContext.stop();
+    this.setData({
+      currentInterestStep: 'subcategory'
+    });
+  },
+  
+  // 新增：选择兴趣细分类别
+  selectSubcategory: function(e) {
+    const subcategoryId = e.currentTarget.dataset.subcategoryId;
+    const selectedSubcategories = [...this.data.selectedSubcategories];
+    
+    const index = selectedSubcategories.indexOf(subcategoryId);
+    if (index > -1) {
+      selectedSubcategories.splice(index, 1);
+    } else {
+      selectedSubcategories.push(subcategoryId);
     }
     
-    // 显示加载提示
-    wx.showLoading({
-      title: '加载语音中...',
-      mask: true
-    });
-    
-    // 设置当前播放状态
     this.setData({
-      isPlayingAudio: true,
-      currentPlayingId: textId,
-      playingText: text
+      selectedSubcategories: selectedSubcategories
+    });
+  },
+  
+  // 新增：确认细分选择，完成兴趣选择
+  confirmSubcategorySelection: function() {
+    // 检查禁用状态，防止重复点击
+    if (this.data.selectedSubcategories.length === 0) {
+      wx.showToast({
+        title: '请至少选择一个具体兴趣',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 生成兴趣总结
+    const selectedCategoryNames = this.data.selectedInterestCategories.map(id => {
+      const category = this.data.interestCategories.find(cat => cat.id === id);
+      return category ? category.name : '';
+    }).filter(Boolean);
+    
+    const selectedSubcategoryNames = this.data.selectedSubcategories.map(id => {
+      for (let category of this.data.interestCategories) {
+        const subcategory = category.subcategories.find(sub => sub.id === id);
+        if (subcategory) return subcategory.name;
+      }
+      return '';
+    }).filter(Boolean);
+    
+    const summaryMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `兴趣选择完成！✨\n\n您希望重点培养孩子在以下方面的兴趣：\n\n🎯 主要方向：${selectedCategoryNames.join('、')}\n\n📋 具体兴趣：${selectedSubcategoryNames.join('、')}\n\n现在我将基于这些信息为您生成个性化的研学建议...`
+    };
+    
+    const newMessages = [...this.data.chatMessages, summaryMessage];
+      this.setData({
+      chatMessages: newMessages,
+      showInterestSelection: false,
+      currentInterestStep: 'complete',
+      collectionPhase: 'complete',
+      isLoadingSuggestions: true
     });
     
-    // 请求语音服务
-    const that = this;
-    const serviceUrl = 'http://119.3.217.132:5000/spk/1';
+    // 延迟生成建议
+    setTimeout(() => {
+      this.generateEnhancedSuggestion();
+    }, 2000);
+  },
+  
+  // 新增：返回大类选择
+  backToCategorySelection: function() {
+    this.setData({
+      currentInterestStep: 'category',
+      selectedSubcategories: []
+    });
+  },
+  
+  // 新增：跳过兴趣选择
+  skipInterestSelection: function() {
+    // 【关键修复】确保跳过时也提取基本信息
+    const messages = this.data.chatMessages;
+    const conversationText = messages.map(msg => msg.content).join(' ');
     
+    // 智能提取并设置基本信息
+    const extractedInfo = this.extractInfoWithDefaults(conversationText);
+    
+    console.log('🔧 跳过兴趣选择时提取的信息:', extractedInfo);
+    
+    // 重要：将提取的信息设置到data中，供AI1使用
+    this.setData({
+      kidsInfo: extractedInfo.kidsInfo,
+      venueType: extractedInfo.venueType,
+      specificVenue: extractedInfo.specificVenue,
+      duration: extractedInfo.duration
+    });
+    
+    const skipMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `好的，我将基于基本信息为您生成通用的研学建议：\n\n👶 孩子信息：${extractedInfo.kidsInfo[0].age}岁${extractedInfo.kidsInfo[0].gender}孩\n📍 研学场所：${extractedInfo.specificVenue}\n⏰ 研学时长：${extractedInfo.duration}`
+    };
+    
+    const newMessages = [...this.data.chatMessages, skipMessage];
+    this.setData({
+      chatMessages: newMessages,
+      showInterestSelection: false,
+      collectionPhase: 'complete',
+      isLoadingSuggestions: true
+    });
+    
+    setTimeout(() => {
+      this.generateSuggestion();
+    }, 1000);
+  },
+  
+  // 新增：增强版建议生成（考虑兴趣选择）
+  generateEnhancedSuggestion: function() {
+    const that = this;
+    
+    // 构建增强版AI1的提示词
+    const kidsInfo = this.data.kidsInfo[0];
+    
+    // 获取选择的兴趣信息
+    const selectedCategoryInfo = this.data.selectedInterestCategories.map(id => {
+      const category = this.data.interestCategories.find(cat => cat.id === id);
+      return category ? `${category.icon} ${category.name}` : '';
+    }).filter(Boolean);
+    
+    const selectedSubcategoryInfo = this.data.selectedSubcategories.map(id => {
+      for (let category of this.data.interestCategories) {
+        const subcategory = category.subcategories.find(sub => sub.id === id);
+        if (subcategory) return `${subcategory.name}：${subcategory.description}`;
+      }
+      return '';
+    }).filter(Boolean);
+    
+    const prompt = `请为以下个性化研学需求生成3-4个精准的分析建议：
+
+基本信息：
+- 孩子年龄：${kidsInfo.age}岁
+- 性别：${kidsInfo.gender}
+- 研学场所：${this.data.specificVenue}
+- 研学时长：${this.data.duration}
+
+兴趣培养重点：
+主要方向：${selectedCategoryInfo.join('、')}
+具体兴趣：
+${selectedSubcategoryInfo.map(info => `• ${info}`).join('\n')}
+
+请生成JSON格式的建议列表，每个建议要：
+1. 紧密结合用户选择的兴趣方向
+2. 针对${kidsInfo.age}岁孩子的认知特点
+3. 充分利用${this.data.specificVenue}的特色资源
+4. 体现所选兴趣类别的核心要素
+
+返回格式：
+{
+  "suggestions": [
+    {
+      "title": "建议标题",
+      "description": "详细描述，重点体现兴趣培养",
+      "ageRange": "年龄范围",
+      "learningGoals": "具体学习目标",
+      "interestFocus": "主要培养的兴趣方向",
+      "activities": "推荐的具体活动"
+    }
+  ]
+}
+
+请确保建议内容与用户选择的兴趣高度匹配，具有很强的针对性和实用性。`;
+
+    // 调用AI1接口
     wx.request({
-      url: serviceUrl,
+      url: `${this.data.serverUrl}/1`,
       method: 'POST',
       data: {
-        text: text,
-        key: 'hjl2004'
+        text: prompt,
+        key: this.data.accessKey,
+        stream: false
       },
       header: {
         'Content-Type': 'application/json',
-        'X-Access-Key': 'hjl2004'
+        'X-Access-Key': this.data.accessKey
       },
-      responseType: 'arraybuffer', // 重要：接收二进制数据
       success: function(res) {
-        wx.hideLoading();
-        
-        if (res.statusCode !== 200) {
-          console.error('语音请求失败，状态码:', res.statusCode);
-          wx.showToast({
-            title: `语音请求失败: ${res.statusCode}`,
-            icon: 'none'
-          });
+        console.log('增强版AI1建议生成成功:', res);
+        if (res.statusCode === 200) {
+          try {
+            let suggestions = [];
+            let responseContent = '';
+            
+            // 处理响应数据
+            if (res.data && res.data.content) {
+              responseContent = res.data.content;
+            } else if (res.data && typeof res.data === 'string') {
+              responseContent = res.data;
+            }
+            
+            // 尝试解析JSON
+            try {
+              const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsedData = JSON.parse(jsonMatch[0]);
+                if (parsedData.suggestions && Array.isArray(parsedData.suggestions)) {
+                  suggestions = parsedData.suggestions.map((item, index) => ({
+                    id: index + 1,
+                    title: item.title || `建议${index + 1}`,
+                    description: item.description || '暂无描述',
+                    ageRange: item.ageRange || `${kidsInfo.age}岁适合`,
+                    learningGoals: item.learningGoals || '提升综合能力',
+                    interestFocus: item.interestFocus || '综合发展',
+                    activities: item.activities || '多样化活动',
+                    isSelected: false
+                  }));
+                }
+              }
+            } catch (parseError) {
+              console.log('JSON解析失败，使用文本解析:', parseError);
+              suggestions = that.parseEnhancedTextSuggestions(responseContent, kidsInfo.age);
+            }
+            
+            // 如果仍然没有建议，使用增强版默认建议
+            if (suggestions.length === 0) {
+              suggestions = that.getEnhancedDefaultSuggestions(kidsInfo.age);
+            }
+            
           that.setData({
-            isPlayingAudio: false,
-            currentPlayingId: ''
-          });
-          return;
-        }
-        
-        // 将二进制数据转换为临时文件
-        const fsm = wx.getFileSystemManager();
-        const tempFilePath = `${wx.env.USER_DATA_PATH}/temp_audio_${Date.now()}.mp3`;
-        
-        try {
-          fsm.writeFileSync(tempFilePath, res.data, 'binary');
-          console.log('音频文件已保存:', tempFilePath);
-          
-          // 播放音频
-          that.data.audioContext.src = tempFilePath;
-          that.data.audioContext.play();
-        } catch (error) {
-          console.error('保存或播放音频文件失败:', error);
-          wx.showToast({
-            title: '语音播放失败',
-            icon: 'none'
-          });
-          that.setData({
-            isPlayingAudio: false,
-            currentPlayingId: ''
-          });
-        }
-      },
-      fail: function(error) {
-        wx.hideLoading();
-        console.error('语音请求发送失败:', error);
-        wx.showToast({
-          title: '语音请求失败',
-          icon: 'none'
-        });
+              suggestions: suggestions,
+              isLoadingSuggestions: false
+            });
+            
+          } catch (error) {
+            console.error('处理增强建议数据失败:', error);
         that.setData({
-          isPlayingAudio: false,
-          currentPlayingId: ''
-        });
-      }
-    });
-  },
-  
-  // 清理音频资源
-  onUnload: function() {
-    if (this.data.audioContext) {
-      this.data.audioContext.stop();
-      this.data.audioContext.destroy();
-    }
-  },
-  
-  // base64转图片，用于生成所需图标
-  base64ToImage: function(base64, callback) {
-    if (!base64) return;
-    
-    // 去掉 data:image/png;base64, 前缀
-    base64 = base64.replace(/^data:image\/\w+;base64,/, '');
-    
-    // 获取文件系统管理器
-    const fsm = wx.getFileSystemManager();
-    const fileName = new Date().getTime();
-    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}.png`;
-    
-    // 写入文件
-    fsm.writeFile({
-      filePath: filePath,
-      data: base64,
-      encoding: 'base64',
-      success: function() {
-        if (callback) {
-          callback(filePath);
+              suggestions: that.getEnhancedDefaultSuggestions(kidsInfo.age),
+              isLoadingSuggestions: false
+            });
+          }
+        } else {
+          that.handleSuggestionError('增强版AI1服务返回错误');
         }
       },
       fail: function(err) {
-        console.error('写入图片文件失败:', err);
+        console.error('增强版AI1建议生成失败:', err);
+        that.handleSuggestionError('网络请求失败');
       }
     });
   },
   
-  // 创建音频播放和暂停图标
-  createAudioIcons: function() {
-    // 直接使用喇叭图标和暂停图标文件路径
-    const playIconPath = "/images/1.png";
-    const pauseIconPath = "/images/2.png";
+  // 新增：解析增强版文本建议
+  parseEnhancedTextSuggestions: function(text, age) {
+    const suggestions = [];
+    const lines = text.split('\n').filter(line => line.trim());
     
-    // 设置到全局数据和页面数据
-    wx.setStorageSync('play_icon_path', playIconPath);
-    wx.setStorageSync('pause_icon_path', pauseIconPath);
-    
-    this.setData({
-      playIconPath: playIconPath,
-      pauseIconPath: pauseIconPath
-    });
-  },
-  
-  // 图片加载成功处理
-  handleImageLoaded: function(e) {
-    console.log('故事插图加载成功');
-  },
-  
-  // 图片加载失败处理
-  handleImageError: function(e) {
-    console.error('故事插图加载失败', e);
-    wx.showToast({
-      title: '图片加载失败',
-      icon: 'none'
-    });
-    // 清除错误的图片URL
-    this.setData({
-      storyImageUrl: ''
-    });
-  }
-});
-
-// 重构 extractSuggestionsFromText，只解析 AI 返回的 JSON
-function extractSuggestionsFromText(text) {
-  let suggestions = [];
-  try {
-    console.log('尝试解析建议 JSON，内容开头:', text.substring(0, 100));
-    
-    // 清理文本，尝试找到有效的 JSON 字符串
-    let cleanText = text.trim();
-    
-    // 查找 JSON 的起始位置和结束位置
-    const startIdx = cleanText.indexOf('{');
-    const endIdx = cleanText.lastIndexOf('}');
-    
-    if (startIdx >= 0 && endIdx > startIdx) {
-      cleanText = cleanText.substring(startIdx, endIdx + 1);
-      console.log('提取的 JSON 字符串开头:', cleanText.substring(0, 50));
+    let currentSuggestion = null;
+    for (let line of lines) {
+      line = line.trim();
+      
+      if (/^\d+[\.、]/.test(line) || /^[一二三四五六七八九十][、.]/.test(line)) {
+        if (currentSuggestion) {
+          suggestions.push(currentSuggestion);
+        }
+        currentSuggestion = {
+          id: suggestions.length + 1,
+          title: line.replace(/^\d+[\.、]/, '').replace(/^[一二三四五六七八九十][、.]/, '').trim(),
+          description: '',
+          ageRange: `${age}岁适合`,
+          learningGoals: '兴趣培养和能力提升',
+          interestFocus: '个性化发展',
+          activities: '针对性活动',
+          isSelected: false
+        };
+      } else if (currentSuggestion && line.length > 10) {
+        if (!currentSuggestion.description) {
+          currentSuggestion.description = line;
+        } else {
+          currentSuggestion.description += ' ' + line;
+        }
+      }
     }
     
-    const data = JSON.parse(cleanText);
-    console.log('成功解析 JSON 数据:', Object.keys(data));
+    if (currentSuggestion) {
+      suggestions.push(currentSuggestion);
+    }
     
-    if (Array.isArray(data.suggestions)) {
-      console.log('找到建议数组，数量:', data.suggestions.length);
-      suggestions = data.suggestions.map((item, index) => ({
-            id: index + 1,
-        title: item.title || `建议${index + 1}`,
-        description: item.description || '',
-        ageRange: item.ageRange || '',
-        learningGoals: item.learningGoals || '',
-        readingMaterials: item.readingMaterials || '',
-        wanfaLiucheng: item.wanfaLiucheng || '',
-        gaojieThinking: item.gaojieThinking || '',
+    return suggestions.slice(0, 4);
+  },
+  
+  // 新增：获取增强版默认建议
+  getEnhancedDefaultSuggestions: function(age) {
+    const selectedCategories = this.data.selectedInterestCategories;
+    const venue = this.data.specificVenue;
+    
+    const baseSuggestions = [
+      {
+        id: 1,
+        title: "个性化探索体验",
+        description: `基于您选择的兴趣方向，在${venue}进行深度探索`,
+        ageRange: `${age}岁适合`,
+        learningGoals: "培养专项兴趣和探索精神",
+        interestFocus: "个性化发展",
+        activities: "定制化参观和互动体验",
         isSelected: false
-      }));
-    } else {
-      console.warn('数据格式不包含建议数组');
-    }
-  } catch (e) {
-    console.error('解析建议 JSON 失败:', e.message);
-    console.error('原始文本开头:', text.substring(0, 200));
-  }
-  return suggestions;
-}
+      },
+      {
+        id: 2,
+        title: "兴趣导向学习",
+        description: "结合孩子兴趣特点，设计针对性学习活动",
+        ageRange: `${age}岁适合`,
+        learningGoals: "提升学习兴趣和主动性",
+        interestFocus: "兴趣驱动",
+        activities: "兴趣主题探究和实践",
+        isSelected: false
+      },
+      {
+        id: 3,
+        title: "综合能力培养",
+        description: "在兴趣基础上全面提升各项能力",
+        ageRange: `${age}岁适合`,
+        learningGoals: "综合素质提升",
+        interestFocus: "全面发展",
+        activities: "多元化能力训练",
+        isSelected: false
+      }
+    ];
+    
+    return baseSuggestions;
+  },
+}); 

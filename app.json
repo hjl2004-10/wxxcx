@@ -2,11 +2,11 @@
   "pages": [
     "pages/logs/logs",
     "pages/studyProcess/studyProcess",
-    "pages/studyDetail/studyDetail",
     "pages/share/share",
     "pages/myProfile/myProfile",
     "pages/ceshi/ceshi",
-    "pages/help/help"
+    "pages/help/help",
+    "pages/wenda/wenda"
   ],
   "window": {
     "navigationBarTextStyle": "black",
@@ -27,8 +27,8 @@
         "selectedIconPath": "images/custom_study_selected.png"
       },
       {
-        "pagePath": "pages/ceshi/ceshi",
-        "text": "导航",
+        "pagePath": "pages/wenda/wenda",
+        "text": "问答",
         "iconPath": "images/smart_nav.png",
         "selectedIconPath": "images/smart_nav_selected.png"
       },

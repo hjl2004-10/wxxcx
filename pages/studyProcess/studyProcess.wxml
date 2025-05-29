@@ -1,4 +1,5 @@
-<view class="container">
+<view class="new-container">
+  <!-- 顶部流程步骤保持不变 -->
   <view class="flow-steps">
     <view class="flow-step {{currentStep == 1 ? 'active' : ''}}" bindtap="switchToStep" data-step="1">
       <view class="step-circle">1</view>
@@ -10,260 +11,289 @@
       <text class="step-text">研学中</text>
     </view>
     <view class="step-line"></view>
-    <view class="flow-step {{currentStep == 3 ? 'active' : ''}} {{!stepsEnabled ? 'disabled' : ''}}" bindtap="switchToStep" data-step="3">
+    <view class="flow-step disabled" bindtap="showInDevelopment" data-step="3">
       <view class="step-circle">3</view>
-      <text class="step-text">研学后</text>
+      <text class="step-text">正在开发.</text>
     </view>
   </view>
 
-  <!-- 子选项卡，仅在研学前且有建议时显示 -->
-  <view class="sub-step-tabs" wx:if="{{currentStep == 1}}">
-    <view class="sub-step {{subStep == 'info' ? 'active' : ''}}" bindtap="switchSubStep" data-sub-step="info">基本信息</view>
-    <view class="sub-step {{subStep == 'suggestions' ? 'active' : ''}}" bindtap="switchSubStep" data-sub-step="suggestions">分析建议</view>
-    <view class="sub-step {{subStep == 'guideStory' ? 'active' : ''}} {{!guideStoryNodes && !guideStory ? 'disabled' : ''}}" bindtap="switchSubStep" data-sub-step="guideStory">导读材料</view>
-  </view>
-
-  <!-- 研学前-基本信息 -->
-  <view class="common-content no-scroll" hidden="{{currentStep != 1 || subStep != 'info'}}">
-    <!-- 孩子信息 - 简化版 -->
-    <view class="compact-card">
-      <view class="mini-header">
-        <image class="mini-icon" src="/images/kid_icon.png" mode="aspectFit"></image>
-        <text class="mini-title">孩子信息</text>
-        <view class="add-icon" bindtap="addKid" wx:if="{{kidsInfo.length < 3}}">+</view>
-      </view>
-
-      <view class="compact-kids">
-        <block wx:for="{{kidsInfo}}" wx:key="id">
-          <view class="kid-row">
-            <text class="kid-num">{{item.id}}</text>
-            <view class="gender-select">
-              <view class="gender-option {{item.gender === '男' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="男">男</view>
-              <view class="gender-option {{item.gender === '女' ? 'active' : ''}}" bindtap="selectGender" data-index="{{index}}" data-gender="女">女</view>
+  <!-- 研学前新布局 -->
+  <view class="chat-layout" hidden="{{currentStep != 1}}">
+    <!-- 上半部分：对话和建议并排 -->
+    <view class="chat-suggestions-row">
+      <!-- 左侧对话区域 -->
+      <view class="chat-section">
+        <view class="chat-header">
+          <text class="chat-title">智能助手</text>
+          <text class="chat-subtitle">让我来帮您规划研学活动</text>
+        </view>
+        
+        <view class="chat-messages">
+          <block wx:for="{{chatMessages}}" wx:key="id">
+            <view class="message {{item.role == 'assistant' ? 'assistant' : 'user'}}">
+              <view class="message-avatar">
+                <text>{{item.role == 'assistant' ? '🤖' : '👤'}}</text>
+              </view>
+              <view class="message-content">
+                <text>{{item.content}}</text>
+              </view>
             </view>
-            <input class="mini-input age" type="number" data-index="{{index}}" bindinput="inputAge" value="{{item.age}}" placeholder="年龄"/>
-            <text class="delete-icon" bindtap="deleteKid" data-index="{{index}}" wx:if="{{kidsInfo.length > 1}}">×</text>
-          </view>
-        </block>
-      </view>
-    </view>
-
-    <!-- 目的地信息 - 简化版 -->
-    <view class="compact-card">
-      <view class="mini-header">
-        <image class="mini-icon" src="/images/location_icon.png" mode="aspectFit"></image>
-        <text class="mini-title">目的地</text>
-      </view>
-
-      <view class="pick-row">
-        <picker class="mini-picker" mode="selector" range="{{['博物馆', '科技馆', '历史遗迹', '自然风光', '自定义']}}" bindchange="selectVenueType">
-          <view class="picker-inner">
-            <text class="picker-label">场景:</text>
-            <text class="picker-value">{{venueType || '请选择'}}</text>
-          </view>
-        </picker>
-
-        <!-- 具体场所：选择或自定义 -->
-        <picker class="mini-picker" mode="selector" range="{{specificVenueOptions}}" bindchange="selectSpecificVenue" wx:if="{{!showCustomVenueInput}}">
-          <view class="picker-inner">
-            <text class="picker-label">场所:</text>
-            <text class="picker-value">{{specificVenue || '请选择'}}</text>
-          </view>
-        </picker>
-        <input class="mini-input" placeholder="请输入自定义场所" bindinput="onCustomVenueInput" value="{{customVenue}}" wx:if="{{showCustomVenueInput}}" />
-      </view>
-    </view>
-
-    <!-- 时长 - 简化版 -->
-    <view class="compact-card">
-      <view class="mini-header">
-        <image class="mini-icon" src="/images/time_icon.png" mode="aspectFit"></image>
-        <text class="mini-title">游览时长</text>
-      </view>
-
-      <view class="mini-duration">
-        <view class="duration-btn {{duration == '2h' ? 'active' : ''}}" data-time="2h" bindtap="selectDuration">2h</view>
-        <view class="duration-btn {{duration == '4h' ? 'active' : ''}}" data-time="4h" bindtap="selectDuration">4h</view>
-        <view class="duration-btn {{duration == '半天' ? 'active' : ''}}" data-time="半天" bindtap="selectDuration">半天</view>
-        <view class="duration-btn {{duration == '全天' ? 'active' : ''}}" data-time="全天" bindtap="selectDuration">全天</view>
-      </view>
-    </view>
-
-    <view class="submit-btn" bindtap="generateSuggestion">生成研学分析建议</view>
-  </view>
-  
-  <!-- 研学前-分析建议列表 -->
-  <view class="common-content" hidden="{{currentStep != 1 || subStep != 'suggestions'}}">
-    <view class="suggestion-tips">
-      请选择您感兴趣的研学分析建议（可多选）
-      <!-- 在标题右侧添加小型加载指示器，不遮挡内容 -->
-      <text class="loading-indicator" wx:if="{{isLoadingMore}}">生成中...</text>
-    </view>
-    
-    <view class="suggestion-list">
-      <!-- 只在没有建议时显示初始加载动画 -->
-      <view class="loading-container" wx:if="{{suggestions.length === 0 && isLoadingMore}}">
-        <view class="spinner"></view>
-        <text class="loading-text">正在生成建议...</text>
-      </view>
-      
-      <block wx:for="{{suggestions}}" wx:key="id">
-        <view class="suggestion-item {{item.isSelected ? 'selected' : ''}}" 
-          bindtap="toggleSelectSuggestion" data-index="{{index}}">
-          <view class="suggestion-header">
-            <view class="suggestion-title">{{item.title}}</view>
-            <view class="suggestion-select-icon">{{item.isSelected ? '✓' : ''}}</view>
-          </view>
-          <view class="suggestion-brief">{{item.description}}</view>
-          <view class="suggestion-footer">
-            <view class="suggestion-age">适合年龄: {{item.ageRange}}</view>
-            <view class="view-detail" catchtap="viewSuggestionDetail" data-index="{{index}}">查看详情</view>
-            <!-- 语音播放按钮 -->
-            <view class="audio-btn" catchtap="togglePlayAudio" data-id="suggestion_{{index}}" data-text="{{item.title}}。{{item.description}}">
-              <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_'+index ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
-            </view>
-          </view>
-        </view>
-      </block>
-    </view>
-
-    <!-- 在列表底部添加小型加载指示器，但仅当有建议且仍在加载时 -->
-    <view class="bottom-loading-indicator" wx:if="{{suggestions.length > 0 && isLoadingMore}}">
-      <text>正在生成导读材料...</text>
-      <view class="dot-loading">
-        <text class="dot">.</text>
-        <text class="dot">.</text>
-        <text class="dot">.</text>
-      </view>
-    </view>
-
-    <view class="primary-btn {{selectedSuggestions.length === 0 ? 'disabled' : ''}}" bindtap="generatePlan">确认选择并开始研学</view>
-  </view>
-  
-  <!-- 研学前-分析建议详情 -->
-  <view class="common-content" hidden="{{currentStep != 1 || subStep != 'suggestionDetail'}}">
-    <view class="detail-card" wx:if="{{currentSuggestion}}">
-      <view class="detail-header">
-        <text class="detail-title">{{currentSuggestion.title}}</text>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-detail" catchtap="togglePlayAudio" data-id="suggestion_detail" data-text="{{currentSuggestion.title}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_detail' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
-        </view>
-      </view>
-      
-      <view class="detail-section">
-        <view class="detail-section-title">建议描述</view>
-        <view class="detail-desc">{{currentSuggestion.description}}</view>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_desc" data-text="{{currentSuggestion.description}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_desc' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
-        </view>
-      </view>
-      
-      <view class="detail-section">
-        <view class="detail-section-title">适合年龄段</view>
-        <view class="detail-text">{{currentSuggestion.ageRange}}</view>
-      </view>
-      
-      <view class="detail-section">
-        <view class="detail-section-title">学习目标</view>
-        <view class="detail-text">{{currentSuggestion.learningGoals}}</view>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_goals" data-text="{{currentSuggestion.learningGoals}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_goals' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
-        </view>
-      </view>
-
-      <!-- 添加导读材料板块 -->
-      <view class="detail-section" wx:if="{{currentSuggestion.readingMaterials}}">
-        <view class="detail-section-title">导读材料</view>
-        <view class="detail-text">{{currentSuggestion.readingMaterials}}</view>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_materials" data-text="{{currentSuggestion.readingMaterials}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_materials' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
-        </view>
-      </view>
-
-      <!-- 如果有玩法流程，显示它 -->
-      <view class="detail-section" wx:if="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
-        <view class="detail-section-title">玩法流程</view>
-        <view class="detail-text">{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}</view>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_process" data-text="{{currentSuggestion.wanfaLiucheng || currentSuggestion.flowProcess}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_process' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
-        </view>
-      </view>
-      
-      <!-- 如果有高阶思维带动点，显示它 -->
-      <view class="detail-section" wx:if="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
-        <view class="detail-section-title">高阶思维带动点</view>
-        <view class="detail-text">{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}</view>
-        <!-- 语音播放按钮 -->
-        <view class="audio-btn-inline" catchtap="togglePlayAudio" data-id="suggestion_thinking" data-text="{{currentSuggestion.gaojieThinking || currentSuggestion.advancedThinking}}">
-          <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_thinking' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon-small"></image>
-        </view>
-      </view>
-    </view>
-    
-    <view class="buttons-row">
-      <view class="secondary-btn half-btn" bindtap="backToSuggestions">返回列表</view>
-      <view class="primary-btn half-btn" 
-        bindtap="toggleSelectSuggestion" 
-        data-index="{{currentSuggestionIndex}}">
-        {{currentSuggestion.isSelected ? '取消选择' : '选择此建议'}}
-      </view>
-    </view>
-  </view>
-  
-  <!-- 研学前-预研学指导故事 -->
-  <view class="common-content" hidden="{{currentStep != 1 || subStep != 'guideStory'}}">
-    <view class="story-container">
-      <view class="story-card">
-        <view class="story-header">
-          <text class="story-title">导读材料</text>
-          <!-- 语音播放按钮 -->
-          <view class="audio-btn-story" catchtap="togglePlayAudio" data-id="guide_story" data-text="{{guideStory}}">
-            <image src="{{isPlayingAudio && currentPlayingId === 'guide_story' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
-          </view>
-        </view>
-        <view class="story-content">
-          <rich-text nodes="{{guideStoryNodes}}" wx:if="{{guideStoryNodes}}" />
-          <view wx:else>{{guideStory || '暂无导读材料，请先在"分析建议"中选择建议并生成'}}</view>
+          </block>
           
-          <!-- 故事插图移到内容区域底部 -->
-          <view class="story-image-container" wx:if="{{storyImageUrl || isLoadingImage}}">
-            <view class="story-image-title">故事插图</view>
-            <!-- 加载中显示 -->
-            <view class="image-loading" wx:if="{{isLoadingImage && !storyImageUrl}}">
-              <view class="spinner"></view>
-              <text>正在生成故事插图，可能需要较长时间...</text>
-              <text class="loading-tips">请耐心等待，图片生成大约需要1-2分钟</text>
+          <!-- AI正在回复时的实时显示 -->
+          <view class="message assistant" wx:if="{{isAIResponding}}">
+            <view class="message-avatar">
+              <text>🤖</text>
             </view>
-            <!-- 图片显示 -->
-            <image 
-              wx:if="{{storyImageUrl}}" 
-              src="{{storyImageUrl}}" 
-              mode="widthFix" 
-              class="story-image"
-              binderror="handleImageError"
-              bindload="handleImageLoaded"></image>
+            <view class="message-content ai-typing">
+              <view class="typing-indicator">
+                <view class="typing-dot"></view>
+                <view class="typing-dot"></view>
+                <view class="typing-dot"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <view class="chat-input-area">
+          <input class="chat-input" placeholder="请告诉我您的需求..." value="{{inputText}}" bindinput="onChatInput" confirm-type="send" bindconfirm="sendMessage" disabled="{{isAIResponding}}"/>
+          <view class="send-btn {{inputText && !isAIResponding ? 'active' : ''}} {{isAIResponding ? 'disabled' : ''}}" bindtap="sendMessage">
+            {{isAIResponding ? '回复中...' : '发送'}}
+          </view>
+        </view>
+        
+        <!-- 强制开始按钮 -->
+        <view class="force-start-section" wx:if="{{showForceStartBtn}}">
+          <view class="force-start-tip">对话较长，您可以直接开始生成建议</view>
+          <view class="force-start-btn" bindtap="forceStartGeneration">直接开始</view>
+        </view>
+      </view>
+
+      <!-- 右侧建议区域 -->
+      <view class="suggestions-section">
+        <view class="suggestions-header">
+          <text class="suggestions-title">分析建议</text>
+          <text class="suggestions-subtitle">{{suggestions.length > 0 ? '请选择感兴趣的建议' : '完善信息后将显示建议'}}</text>
+        </view>
+        
+        <view class="suggestions-content">
+          <!-- 加载状态 -->
+          <view class="suggestions-loading" wx:if="{{isLoadingSuggestions}}">
+            <view class="spinner"></view>
+            <text>正在生成建议...</text>
+          </view>
+          
+          <!-- 建议列表 -->
+          <view class="suggestions-list" wx:else>
+            <block wx:for="{{suggestions}}" wx:key="id">
+              <view class="suggestion-card {{item.isSelected ? 'selected' : ''}}" bindtap="toggleSelectSuggestion" data-index="{{index}}">
+                <view class="suggestion-header">
+                  <view class="suggestion-title">{{item.title}}</view>
+                  <view class="suggestion-select-icon">{{item.isSelected ? '✓' : ''}}</view>
+                </view>
+                <view class="suggestion-brief">{{item.description}}</view>
+                <view class="suggestion-footer">
+                  <view class="suggestion-age">适合: {{item.ageRange}}</view>
+                  <view class="suggestion-actions">
+                    <view class="view-detail" catchtap="viewSuggestionDetail" data-index="{{index}}">详情</view>
+                    <view class="audio-btn" catchtap="togglePlayAudio" data-id="suggestion_{{index}}" data-text="{{item.title}}。{{item.description}}">
+                      <image src="{{isPlayingAudio && currentPlayingId === 'suggestion_'+index ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </block>
+          </view>
+        </view>
+        
+        <!-- 确认按钮 -->
+        <view class="confirm-suggestions">
+          <view class="primary-btn {{selectedSuggestions.length === 0 ? 'disabled' : ''}}" bindtap="startGeneration">
+            开始生成 ({{selectedSuggestions.length}}个建议)
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 下半部分：并发生成区域 -->
+    <view class="generation-section" wx:if="{{showGenerationArea}}">
+      <view class="generation-header">
+        <text class="generation-title">正在为您生成</text>
+      </view>
+      
+      <view class="generation-content">
+        <!-- 导读材料生成 -->
+        <view class="generation-item {{guideStoryStatus}} {{guideStory && !storyImageUrl ? 'text-ready' : ''}} {{guideStory && isGeneratingImage ? 'image-loading' : ''}}">
+          <view class="generation-item-header">
+            <text class="generation-item-title">📖 导读材料</text>
+            <view class="generation-status">
+              <text class="status-text">{{guideStoryStatusText}}</text>
+              <view class="status-indicator {{guideStoryStatus}}"></view>
+            </view>
+          </view>
+          <view class="generation-preview {{guideStory ? 'expanded' : ''}}" wx:if="{{guideStory}}">
+            <text class="preview-text">{{guideStory.substring(0, 120)}}...</text>
+            <text class="preview-desc" wx:if="{{!storyImageUrl && !isGeneratingImage}}">✅ 文字内容已完成</text>
+            <text class="preview-desc" wx:if="{{isGeneratingImage}}">🎨 正在生成插图...</text>
+            <text class="preview-desc" wx:if="{{storyImageUrl}}">✅ 插图已完成</text>
+          </view>
+        </view>
+        
+        <!-- 研学方案生成 -->
+        <view class="generation-item {{studyPlanStatus}}">
+          <view class="generation-item-header">
+            <text class="generation-item-title">📋 研学方案</text>
+            <view class="generation-status">
+              <text class="status-text">{{studyPlanStatusText}}</text>
+              <view class="status-indicator {{studyPlanStatus}}"></view>
+            </view>
+          </view>
+          <view class="generation-preview {{planTitle ? 'expanded' : ''}}" wx:if="{{planTitle}}">
+            <text class="preview-text">{{planTitle}}</text>
+            <text class="preview-desc">包含{{steps.length}}个步骤，{{studyCards.length}}个研学卡片</text>
           </view>
         </view>
       </view>
       
-      <view class="story-desc">阅读后，您将更好地指导孩子进行研学活动</view>
+      <!-- 完成按钮 - 导读文字完成就显示 -->
+      <view class="generation-actions" wx:if="{{guideStory}}">
+        <view class="primary-btn" bindtap="viewStudyPlan">进入研学流程</view>
+      </view>
     </view>
-    
-    <view class="primary-btn" bindtap="startStudyActivity" wx:if="{{guideStoryNodes || guideStory}}">开始研学活动</view>
-    <view class="primary-btn" bindtap="generateGuideStory" wx:elif="{{selectedSuggestions.length > 0}}">
-      生成导读材料
-      <text class="btn-tips" wx:if="{{!guideStory && !guideStoryNodes}}">（生成过程可能需要1-2分钟）</text>
-    </view>
-    <view class="secondary-btn" bindtap="switchSubStep" data-sub-step="suggestions" wx:else>先选择研学建议</view>
   </view>
 
-  <!-- 研学中页面内容 -->
+  <!-- 兴趣选择界面 - 全新设计 -->
+  <view class="interest-selection-modal" hidden="{{!showInterestSelection}}">
+    <view class="modal-overlay"></view>
+    <view class="interest-modal-content">
+      <!-- 大类选择步骤 -->
+      <view class="interest-step-content" wx:if="{{currentInterestStep === 'category'}}">
+        <view class="interest-header">
+          <text class="interest-title">🎯 选择兴趣方向</text>
+          <text class="interest-subtitle">请选择您希望重点培养孩子的兴趣领域（可多选）</text>
+        </view>
+        
+        <view class="interest-categories">
+          <block wx:for="{{interestCategories}}" wx:key="id">
+            <view class="interest-category-card {{selectedInterestCategories.indexOf(item.id) !== -1 ? 'selected' : ''}}" 
+                  bindtap="selectInterestCategory" data-category-id="{{item.id}}">
+              <text class="category-icon">{{item.icon}}</text>
+              <text class="category-name">{{item.name}}</text>
+              <text class="category-count">{{item.subcategories.length}}个方向</text>
+            </view>
+          </block>
+        </view>
+        
+        <view class="interest-actions">
+          <view class="secondary-btn" bindtap="skipInterestSelection">跳过选择</view>
+          <view class="primary-btn {{selectedInterestCategories.length === 0 ? 'disabled' : ''}}" bindtap="confirmCategorySelection">
+            下一步 ({{selectedInterestCategories.length}})
+          </view>
+        </view>
+      </view>
+      
+      <!-- 细分选择步骤 -->
+      <view class="interest-step-content" wx:if="{{currentInterestStep === 'subcategory'}}">
+        <view class="interest-header">
+          <text class="interest-title">📚 选择具体兴趣</text>
+          <text class="interest-subtitle">在您选择的方向中，具体培养哪些兴趣？（可多选）</text>
+        </view>
+        
+        <view class="interest-subcategories">
+          <block wx:for="{{interestCategories}}" wx:key="id" wx:if="{{selectedInterestCategories.indexOf(item.id) !== -1}}">
+            <view class="subcategory-group">
+              <view class="subcategory-group-title">
+                <text class="group-icon">{{item.icon}}</text>
+                <text class="group-name">{{item.name}}</text>
+              </view>
+              
+              <view class="subcategory-items">
+                <block wx:for="{{item.subcategories}}" wx:key="id" wx:for-item="sub">
+                  <view class="subcategory-card {{selectedSubcategories.indexOf(sub.id) !== -1 ? 'selected' : ''}}"
+                        bindtap="selectSubcategory" data-subcategory-id="{{sub.id}}">
+                    <view class="subcategory-header">
+                      <text class="subcategory-name">{{sub.name}}</text>
+                    </view>
+                    <text class="subcategory-desc">{{sub.description}}</text>
+                  </view>
+                </block>
+              </view>
+            </view>
+          </block>
+        </view>
+        
+        <view class="interest-actions">
+          <view class="secondary-btn" bindtap="backToCategorySelection">返回上一步</view>
+          <view class="primary-btn {{selectedSubcategories.length === 0 ? 'disabled' : ''}}" bindtap="confirmSubcategorySelection">
+            完成选择 ({{selectedSubcategories.length}})
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 建议详情弹窗 -->
+  <view class="suggestion-detail-modal" hidden="{{!showDetailModal}}">
+    <view class="modal-overlay" bindtap="closeDetailModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">{{currentSuggestion.title}}</text>
+        <view class="modal-close" bindtap="closeDetailModal">×</view>
+      </view>
+      <view class="modal-body">
+        <view class="detail-section">
+          <view class="detail-section-title">建议描述</view>
+          <view class="detail-text">{{currentSuggestion.description}}</view>
+        </view>
+        <view class="detail-section">
+          <view class="detail-section-title">适合年龄</view>
+          <view class="detail-text">{{currentSuggestion.ageRange}}</view>
+        </view>
+        <view class="detail-section">
+          <view class="detail-section-title">学习目标</view>
+          <view class="detail-text">{{currentSuggestion.learningGoals}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 研学中页面内容保持原样 -->
   <view class="common-content" hidden="{{currentStep != 2}}">
+    <!-- 导读故事区域 -->
+    <view class="card story-card" wx:if="{{guideStory}}">
+      <view class="story-header">
+        <text class="story-title">导读故事</text>
+        <view class="audio-btn-story" catchtap="togglePlayAudio" data-id="guide_story" data-text="{{guideStory}}">
+          <image src="{{isPlayingAudio && currentPlayingId === 'guide_story' ? pauseIconPath : playIconPath}}" mode="aspectFit" class="audio-icon"></image>
+        </view>
+      </view>
+      
+      <view class="story-content">
+        <text class="story-text">{{guideStory}}</text>
+      </view>
+      
+      <!-- 故事插图 -->
+      <view class="story-image-container" wx:if="{{storyImageUrl || isGeneratingImage || imageError}}">
+        <view class="story-image-title">故事插图</view>
+        
+        <!-- 加载中状态 -->
+        <view class="image-loading" wx:if="{{isGeneratingImage}}">
+          <view class="spinner"></view>
+          <text>正在生成插图...</text>
+          <text class="loading-tips">AI正在为您的故事创作专属插图</text>
+        </view>
+        
+        <!-- 插图显示 -->
+        <image wx:elif="{{storyImageUrl}}" src="{{storyImageUrl}}" mode="aspectFit" class="story-image" bindtap="previewImage" data-url="{{storyImageUrl}}"></image>
+        
+        <!-- 错误状态 -->
+        <view class="image-error" wx:elif="{{imageError}}">
+          <text class="error-text">{{imageError}}</text>
+          <view class="retry-btn" bindtap="regenerateImage">重新生成</view>
+        </view>
+      </view>
+    </view>
+    
     <view class="card">
       <view class="section-title plan-title">{{planTitle}}</view>
       
@@ -293,13 +323,13 @@
       </view>
     </block>
 
-    <view class="buttons-row">
-      <view class="primary-btn half-btn" bindtap="viewDetails">查看详情</view>
-      <view class="primary-btn half-btn" bindtap="completeStudy">完成研学</view>
+    <!-- 完成研学按钮 - 等待所有AI内容加载完成 -->
+    <view class="buttons-row" wx:if="{{guideStory && planTitle && studyCards.length > 0}}">
+      <view class="primary-btn full-btn" bindtap="completeStudy">完成研学</view>
     </view>
   </view>
 
-  <!-- 研学后页面内容 -->
+  <!-- 研学后页面内容保持原样 -->
   <view class="common-content" hidden="{{currentStep != 3}}">
     <view class="card">
       <view class="section-title">研学成果</view>

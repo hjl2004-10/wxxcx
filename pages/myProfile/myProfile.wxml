@@ -2,50 +2,26 @@
 <view class="container">
   <view class="header">我的</view>
 
-  <view class="user-info">
-    <image class="avatar" src="{{userInfo.avatar}}"></image>
-    <view class="user-name">{{userInfo.name}}</view>
-    <view class="user-points">积分: {{userInfo.points}}</view>
-  </view>
-
-  <view class="section-title">我的研学方案</view>
-
-  <view class="study-plans">
-    <block wx:for="{{myStudyPlans}}" wx:key="id">
-      <view class="plan-item" bindtap="viewStudyPlan" data-id="{{item.id}}">
-        <image class="plan-image" src="{{item.image}}" mode="aspectFill"></image>
-        <view class="plan-info">
-          <view class="plan-title">{{item.title}}</view>
-          <view class="plan-date">{{item.date}}</view>
-        </view>
-      </view>
-    </block>
-  </view>
-
-  <view class="section-title">我的研学空间</view>
-  <view class="feature-button" bindtap="goToStudySpace">
-    <image class="feature-icon" src="/images/book_icon.png" mode="aspectFit"></image>
-    <view class="feature-text">查看我的研学成果</view>
-    <view class="feature-arrow">></view>
-  </view>
-
+  
+  <view class="section-title">我的研学方案（待开发）</view>
+  
   <view class="section-title">设置</view>
   <view class="settings">
-    <view class="setting-item">
-      <view class="setting-label">账号信息</view>
+    <view class="setting-item" bindtap="navigateToSetting" data-type="account">
+      <view class="setting-label">账号信息（待开发）</view>
       <view class="setting-arrow">></view>
     </view>
-    <view class="setting-item">
-      <view class="setting-label">通知设置</view>
+    <view class="setting-item" bindtap="navigateToSetting" data-type="notification">
+      <view class="setting-label">通知设置（待开发）</view>
       <view class="setting-arrow">></view>
     </view>
-    <view class="setting-item">
-      <view class="setting-label">关于我们</view>
+    <view class="setting-item" bindtap="navigateToSetting" data-type="about">
+      <view class="setting-label">关于我们（待开发）</view>
       <view class="setting-arrow">></view>
     </view>
-    <view class="setting-item">
+    <view class="setting-item" bindtap="navigateToSetting" data-type="help">
       <view class="setting-label">帮助与反馈</view>
       <view class="setting-arrow">></view>
     </view>
   </view>
-</view> 
+</view>

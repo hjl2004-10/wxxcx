@@ -1,0 +1,88 @@
+<!--pages/wenda/wenda.wxml-->
+<view class="page-container">
+  <!-- 服务选择器 -->
+  <view class="service-card">
+    <picker 
+      bindchange="onServiceChange" 
+      value="{{selectedServiceIndex}}" 
+      range="{{services}}" 
+      range-key="name"
+      bindcancel="onPickerEnd"
+      bindtap="onPickerStart"
+    >
+      <view class="service-picker {{isPickerActive ? 'service-picker-active' : ''}}" hover-class="service-picker-hover">
+        <view class="service-label">当前服务</view>
+        <view class="service-value">{{services[selectedServiceIndex].name}}</view>
+        <view class="service-arrow {{isPickerActive ? 'service-arrow-active' : ''}}">▼</view>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 历史问答区域 -->
+  <scroll-view 
+    scroll-y="true" 
+    class="chat-container {{messages.length > 0 ? 'chat-container-active' : ''}}"
+    scroll-into-view="{{shouldScroll ? scrollToView : ''}}"
+    enhanced="true"
+    show-scrollbar="false"
+    scroll-anchoring="true"
+    bounces="false"
+  >
+    <view class="chat-list">
+      <!-- 遍历消息数组显示对话 -->
+      <block wx:for="{{messages}}" wx:key="timestamp">
+        <view class="message-item {{item.type === 'user' ? 'user-message' : 'ai-message'}}">
+          <view class="message-content">{{item.content}}</view>
+        </view>
+      </block>
+      
+      <!-- 加载动画 -->
+      <view class="message-item ai-message" wx:if="{{isLoading}}">
+        <view class="message-content loading-message">
+          <view class="loading-dots">
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view id="chat-bottom"></view>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="input-card">
+    <view class="input-wrapper">
+      <textarea 
+        class="input-box {{isInputFocused ? 'input-box-focused' : ''}}" 
+        placeholder="{{placeholderText}}"
+        placeholder-class="input-placeholder"
+        value="{{currentInput}}"
+        bindinput="onInputChange"
+        bindfocus="onInputFocus"
+        bindblur="onInputBlur"
+        maxlength="500"
+        auto-height
+        fixed="true"
+        cursor-spacing="20"
+        show-confirm-bar="{{false}}"
+        adjust-position="{{false}}"
+      />
+      <view class="input-counter">{{currentInput.length}}/500</view>
+    </view>
+    
+    <!-- 按钮区域 -->
+    <view class="button-group">
+      <button 
+        class="action-button send-button {{isLoading || !currentInput.trim() ? 'button-disabled' : ''}}"
+        hover-class="button-hover"
+        bindtap="sendRequest"
+      >发送</button>
+      <button 
+        class="action-button clear-button {{messages.length === 0 ? 'button-disabled' : ''}}"
+        hover-class="button-hover"
+        bindtap="clearAll"
+      >清空</button>
+    </view>
+  </view>
+</view> 

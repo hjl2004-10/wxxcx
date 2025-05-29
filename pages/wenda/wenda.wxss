@@ -1,0 +1,263 @@
+/* pages/wenda/wenda.wxss */
+page {
+  background-color: rgb(249, 235, 177);
+  font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', sans-serif;
+}
+
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24rpx;
+  box-sizing: border-box;
+  gap: 24rpx;
+}
+
+/* 服务选择卡片 */
+.service-card {
+  background-color: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.service-picker {
+  padding: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.service-picker-hover {
+  background-color: rgba(249, 235, 177, 0.1);
+  transform: scale(0.98);
+}
+
+.service-picker-active {
+  background-color: rgba(249, 235, 177, 0.2);
+}
+
+.service-label {
+  color: #666;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.service-value {
+  color: #333;
+  font-size: 32rpx;
+  font-weight: 600;
+  flex: 1;
+  margin: 0 20rpx;
+  text-align: center;
+}
+
+.service-arrow {
+  color: #999;
+  font-size: 24rpx;
+  transition: transform 0.3s ease;
+}
+
+.service-arrow-active {
+  transform: rotate(180deg);
+}
+
+/* 聊天容器 */
+.chat-container {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: all 0.3s ease;
+}
+
+.chat-container-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chat-list {
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.message-item {
+  max-width: 80%;
+  animation: messageSlide 0.3s ease;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-message {
+  align-self: flex-end;
+}
+
+.ai-message {
+  align-self: flex-start;
+}
+
+.message-content {
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.user-message .message-content {
+  background-color: rgb(249, 235, 177);
+  color: #333;
+}
+
+.ai-message .message-content {
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* 加载动画 */
+.loading-message {
+  min-width: 120rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 8rpx;
+}
+
+.loading-dot {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #999;
+  border-radius: 50%;
+  animation: loading 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes loading {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+/* 输入卡片 */
+.input-card {
+  background-color: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-box {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.input-placeholder {
+  color: #999;
+}
+
+.input-box-focused {
+  border-color: rgb(249, 235, 177);
+  box-shadow: 0 0 0 2rpx rgba(249, 235, 177, 0.2);
+  background-color: #fff;
+}
+
+.input-counter {
+  position: absolute;
+  right: 24rpx;
+  bottom: 24rpx;
+  color: #999;
+  font-size: 24rpx;
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 20rpx;
+  padding: 0 20rpx;
+}
+
+.action-button {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 40rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.send-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.clear-button {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.button-hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.action-button[disabled] {
+  opacity: 0.5;
+  background-color: #cccccc !important;
+  color: #999999 !important;
+}
+
+/* 移除可能影响点击的样式 */
+button.action-button::after {
+  display: none;
+}
+
+/* 确保按钮文字样式正确 */
+.action-button text {
+  font-size: 32rpx;
+  line-height: 1;
+} 

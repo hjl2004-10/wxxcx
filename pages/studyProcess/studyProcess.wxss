@@ -1599,3 +1599,1063 @@
   padding: 15px;
   box-sizing: border-box;
 }
+
+/* 新的容器样式 */
+.new-container {
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #FDEAAA;
+  min-height: 100vh;
+}
+
+/* 对话式布局 */
+.chat-layout {
+  display: flex;
+  height: calc(100vh - 120rpx); /* 减去顶部流程步骤的高度 */
+  padding: 20rpx;
+  gap: 20rpx;
+}
+
+/* 左侧对话区域 */
+.chat-section {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 30rpx 40rpx 20rpx;
+  background: linear-gradient(135deg, #F8C457 0%, #E6A23C 100%);
+  color: white;
+}
+
+.chat-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.chat-subtitle {
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+  max-height: calc(100vh - 400rpx);
+}
+
+.message {
+  display: flex;
+  margin-bottom: 30rpx;
+  align-items: flex-start;
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #F8C457;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  margin: 0 20rpx;
+  flex-shrink: 0;
+}
+
+.message.user .message-avatar {
+  background: #67C23A;
+}
+
+.message-content {
+  max-width: 70%;
+  padding: 20rpx 30rpx;
+  border-radius: 20rpx;
+  background: #f5f5f5;
+  position: relative;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.message.user .message-content {
+  background: #E6A23C;
+  color: white;
+}
+
+/* AI正在回复的打字效果 */
+.message-content.ai-typing {
+  background: #f5f5f5;
+  padding: 20rpx 30rpx;
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.typing-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #999;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.chat-input-area {
+  padding: 20rpx;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 20rpx 30rpx;
+  border: 2rpx solid #E6A23C;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  background: #fff;
+}
+
+.send-btn {
+  padding: 20rpx 40rpx;
+  background: #ccc;
+  color: white;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  transition: all 0.3s;
+}
+
+.send-btn.active {
+  background: #E6A23C;
+}
+
+/* 右侧建议区域 */
+.suggestions-section {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.suggestions-header {
+  padding: 30rpx 40rpx 20rpx;
+  background: linear-gradient(135deg, #67C23A 0%, #5daf34 100%);
+  color: white;
+}
+
+.suggestions-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.suggestions-subtitle {
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+
+.suggestions-content {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+}
+
+.suggestions-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300rpx;
+  color: #999;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.suggestion-card {
+  background: #f9f9f9;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  border: 3rpx solid transparent;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.suggestion-card:hover {
+  background: #f0f0f0;
+}
+
+.suggestion-card.selected {
+  border-color: #67C23A;
+  background: #f0f9ff;
+}
+
+.suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.suggestion-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  flex: 1;
+}
+
+.suggestion-select-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #67C23A;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.suggestion-card.selected .suggestion-select-icon {
+  opacity: 1;
+}
+
+.suggestion-brief {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 20rpx;
+}
+
+.suggestion-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggestion-age {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.view-detail {
+  font-size: 24rpx;
+  color: #E6A23C;
+  padding: 10rpx 20rpx;
+  border: 1rpx solid #E6A23C;
+  border-radius: 20rpx;
+}
+
+.audio-btn {
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-icon {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.confirm-suggestions {
+  padding: 30rpx;
+  border-top: 1px solid #eee;
+}
+
+.primary-btn {
+  width: 100%;
+  background: #67C23A;
+  color: white;
+  text-align: center;
+  border-radius: 50rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.primary-btn.disabled {
+  background: #ccc;
+  pointer-events: none;
+}
+
+.primary-btn.half-btn {
+  width: calc(50% - 10rpx);
+  display: inline-block;
+  margin: 0 5rpx;
+}
+
+.primary-btn.full-btn {
+  width: 100%;
+  flex: none;
+}
+
+/* 底部并发生成区域 - 修改为非固定定位 */
+.generation-section {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  background: white;
+  border: 2rpx solid #E6A23C;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(230,162,60,0.15);
+  z-index: 10;
+  margin: 20rpx;
+  animation: slideUp 0.3s ease-out;
+}
+
+/* 添加滑入动画 */
+@keyframes slideUp {
+  0% {
+    transform: translateY(50rpx);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 确保建议区域有足够的底部空间 */
+.suggestions-section {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 20rpx; /* 为生成区域留出空间 */
+}
+
+/* 调整对话布局，为底部生成区域预留空间 */
+.chat-layout {
+  display: flex;
+  height: calc(100vh - 140rpx); /* 为底部生成区域留出更多空间 */
+  padding: 20rpx;
+  gap: 20rpx;
+  flex-direction: column; /* 改为垂直布局，更好适应生成区域 */
+}
+
+/* 上半部分：对话和建议 */
+.chat-suggestions-row {
+  display: flex;
+  flex: 1;
+  gap: 20rpx;
+  min-height: 0; /* 确保内容可以收缩 */
+}
+
+/* 优化生成项目的预览样式 */
+.generation-preview {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.4;
+  max-height: 120rpx;
+  overflow-y: auto;
+  background: rgba(255,255,255,0.8);
+  padding: 16rpx;
+  border-radius: 8rpx;
+  margin-top: 16rpx;
+}
+
+.generation-preview.expanded {
+  max-height: none;
+  background: #fff;
+  border: 1rpx solid #E6A23C;
+}
+
+/* 生成状态的特殊样式 */
+.generation-item.text-ready {
+  border-color: #67C23A;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+}
+
+.generation-item.image-loading {
+  border-color: #E6A23C;
+  background: linear-gradient(135deg, #fff9e6 0%, #fef3e6 100%);
+}
+
+.generation-header {
+  padding: 30rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #E6A23C 0%, #F8C457 100%);
+  color: white;
+  border-radius: 20rpx 20rpx 0 0;
+}
+
+.generation-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: white;
+}
+
+.generation-content {
+  padding: 30rpx;
+  display: flex;
+  gap: 30rpx;
+}
+
+.generation-item {
+  flex: 1;
+  background: #f9f9f9;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  border: 3rpx solid transparent;
+  transition: all 0.3s;
+  min-height: 200rpx;
+}
+
+.generation-item.loading {
+  border-color: #E6A23C;
+  background: linear-gradient(135deg, #fff9e6 0%, #fef3e6 100%);
+}
+
+.generation-item.completed {
+  border-color: #67C23A;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+}
+
+.generation-item.error {
+  border-color: #F56C6C;
+  background: #fef0f0;
+}
+
+.generation-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.generation-item-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.generation-status {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.status-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.status-indicator {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background: #ccc;
+}
+
+.status-indicator.loading {
+  background: #E6A23C;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.completed {
+  background: #67C23A;
+}
+
+.preview-text {
+  display: block;
+  margin-bottom: 10rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.preview-desc {
+  color: #999;
+  font-size: 22rpx;
+  font-style: italic;
+}
+
+.generation-actions {
+  padding: 30rpx;
+  display: flex;
+  gap: 30rpx;
+  border-top: 1px solid #eee;
+  background: #f8f8f8;
+  border-radius: 0 0 20rpx 20rpx;
+}
+
+/* 快速预览按钮 */
+.quick-preview-btn {
+  padding: 12rpx 24rpx;
+  background: #E6A23C;
+  color: white;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  margin-top: 16rpx;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.quick-preview-btn:active {
+  background: #D4941C;
+  transform: scale(0.95);
+}
+
+.quick-preview-btn.disabled {
+  background: #ccc;
+  pointer-events: none;
+}
+
+/* 状态指示器动画 */
+.status-indicator.error {
+  background: #F56C6C;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid #f3f3f3;
+  border-top: 4rpx solid #E6A23C;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 响应式调整 */
+@media (max-width: 750px) {
+  .chat-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .chat-suggestions-row {
+    flex-direction: column;
+  }
+  
+  .chat-section, .suggestions-section {
+    flex: none;
+    min-height: 400rpx;
+  }
+  
+  .generation-content {
+    flex-direction: column;
+  }
+  
+  .generation-item {
+    min-height: 160rpx;
+  }
+}
+
+/* 导读材料和方案的半按钮样式 */
+.half-btn {
+  flex: 1;
+  margin: 0 10rpx;
+}
+
+/* 优化建议确认按钮 */
+.confirm-suggestions {
+  padding: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+  background: #f8f8f8;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #E6A23C 0%, #D4911A 100%);
+  color: white;
+  text-align: center;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  transition: all 0.3s;
+  box-shadow: 0 4rpx 12rpx rgba(230,162,60,0.3);
+}
+
+.primary-btn:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 8rpx rgba(230,162,60,0.2);
+}
+
+.primary-btn.disabled {
+  background: #ddd;
+  color: #999;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
+.primary-btn.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 兴趣选择界面样式 - 简化版 */
+.interest-selection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.interest-modal-content {
+  width: 90%;
+  max-width: 900rpx;
+  max-height: 90vh;
+  background: white;
+  border-radius: 24rpx;
+  box-shadow: 0 12rpx 40rpx rgba(0,0,0,0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 10000;
+}
+
+/* 移除动画 */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 大类选择 - 简化版 */
+.interest-categories {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.interest-category-card {
+  background: #f8f9fa; /* 浅灰色背景 */
+  border: 3rpx solid #e9ecef;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  text-align: center;
+  position: relative;
+  min-height: 180rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: calc(50% - 10rpx);
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+/* 选中状态 - 适中的深色 */
+.interest-category-card.selected {
+  background: #34495e; /* 适中的深蓝灰色 */
+  border-color: #34495e;
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(52,73,94,0.3);
+  border-width: 4rpx;
+}
+
+.interest-category-card.selected .category-name,
+.interest-category-card.selected .category-count,
+.interest-category-card.selected .category-icon {
+  color: white;
+}
+
+/* 移除勾选图标样式 */
+/* .category-select-icon 样式已删除 */
+
+/* 细分选择 - 更明显的选中状态 */
+.subcategory-card {
+  background: #f8f9fa; /* 浅灰色背景 */
+  border: 2rpx solid #e9ecef;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+/* 细分选择 - 适中的深色选中状态 */
+.subcategory-card.selected {
+  background: #34495e; /* 适中的深蓝灰色 */
+  border-color: #34495e;
+  color: white;
+  box-shadow: 0 2rpx 8rpx rgba(52,73,94,0.3);
+  border-width: 3rpx;
+}
+
+.subcategory-card.selected .subcategory-name,
+.subcategory-card.selected .subcategory-desc {
+  color: white;
+}
+
+/* 移除细分勾选图标样式 */
+/* .subcategory-select-icon 样式已删除 */
+
+
+.subcategory-card {
+  background: #f8f9fa;
+  border: 2rpx solid #e9ecef;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease; /* 添加过渡效果 */
+}
+
+/* 操作按钮区域 - 简化版 */
+.interest-actions {
+  display: flex;
+  gap: 16rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid #f0f0f0;
+  margin-top: auto;
+}
+
+.interest-actions .secondary-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  background: #f8f9fa;
+  color: #666;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  border: 2rpx solid #e9ecef;
+}
+
+.interest-actions .primary-btn {
+  flex: 2;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  background: #E6A23C;
+  color: white;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.interest-actions .primary-btn.disabled {
+  background: #d9d9d9 !important;
+  color: #999 !important;
+  pointer-events: none;
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 600px) {
+  .interest-categories {
+    flex-direction: column;
+  }
+  
+  .interest-category-card {
+    width: 100%;
+  }
+  
+  .interest-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .category-icon {
+    font-size: 48rpx;
+  }
+  
+  .interest-actions {
+    flex-direction: column;
+  }
+  
+  .interest-actions .primary-btn,
+  .interest-actions .secondary-btn {
+    flex: none;
+  }
+}
+
+/* 建议详情弹窗样式 */
+.suggestion-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  background: white;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 30rpx;
+  background: #F8C457;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.modal-close {
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+}
+
+.modal-body {
+  padding: 30rpx;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 30rpx;
+}
+
+.detail-section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #E6A23C;
+  margin-bottom: 15rpx;
+}
+
+.detail-text {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 强制开始按钮样式 */
+.force-start-section {
+  padding: 20rpx;
+  border-top: 1px solid #eee;
+  background: #f8f8f8;
+  text-align: center;
+}
+
+.force-start-tip {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.force-start-btn {
+  background: linear-gradient(135deg, #67C23A 0%, #5daf34 100%);
+  color: white;
+  padding: 20rpx 40rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(103,194,58,0.3);
+  transition: all 0.3s;
+}
+
+.force-start-btn:active {
+  transform: scale(0.95);
+}
+
+/* 兴趣选择步骤内容 */
+.interest-step-content {
+  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* 头部样式 */
+.interest-header {
+  text-align: center;
+  margin-bottom: 40rpx;
+  padding-bottom: 30rpx;
+  border-bottom: 2rpx solid #f5f5f5;
+}
+
+.interest-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.interest-subtitle {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 图标和文字样式 */
+.category-icon {
+  font-size: 56rpx;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.category-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.category-count {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 细分选择区域 */
+.interest-subcategories {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 40rpx;
+  max-height: 50vh;
+}
+
+.subcategory-group {
+  margin-bottom: 32rpx;
+}
+
+.subcategory-group-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding: 16rpx 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  border-left: 4rpx solid #E6A23C;
+}
+
+.group-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.group-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.subcategory-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.subcategory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.subcategory-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.subcategory-desc {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.4;
+}

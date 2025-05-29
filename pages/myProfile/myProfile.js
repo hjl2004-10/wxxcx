@@ -4,36 +4,41 @@ Page({
       name: '小明',
       avatar: '/images/avatar.png',
       points: 120
-    },
-    myStudyPlans: [
-      {
-        id: 1,
-        title: '文人墨韵',
-        date: '2025.5.1',
-        image: '/images/study_theme.png'
-      },
-      {
-        id: 2,
-        title: '科技创新',
-        date: '2025.6.15',
-        image: '/images/study_theme.png'
-      }
-    ]
+    }
   },
-  onLoad: function (options) {
-    // 页面加载时执行
-  },
-  viewStudyPlan: function(e) {
-    const id = e.currentTarget.dataset.id;
-    wx.navigateTo({
-      url: '/pages/studyDetail/studyDetail?id=' + id
-    });
-  },
-  
-  // 跳转到研学空间
-  goToStudySpace: function() {
-    wx.navigateTo({
-      url: '/pages/share/share'
-    });
+
+  // 添加导航到各个设置项的方法
+  navigateToSetting: function(e) {
+    const type = e.currentTarget.dataset.type;
+    
+    switch(type) {
+      case 'account':
+        // 账号信息页面
+        wx.showToast({
+          title: '功能开发中',
+          icon: 'none'
+        });
+        break;
+      case 'notification':
+        // 通知设置页面
+        wx.showToast({
+          title: '功能开发中',
+          icon: 'none'
+        });
+        break;
+      case 'about':
+        // 关于我们页面
+        wx.showToast({
+          title: '功能开发中',
+          icon: 'none'
+        });
+        break;
+      case 'help':
+        // 帮助与反馈页面
+        wx.navigateTo({
+          url: '/pages/help/help'
+        });
+        break;
+    }
   }
 }); 
